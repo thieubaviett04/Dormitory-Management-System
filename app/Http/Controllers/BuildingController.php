@@ -61,7 +61,9 @@ class BuildingController extends Controller
      */
     public function edit(string $id)
     {
-        //
+        $building = Building::findOrFail($id);
+
+        return view('buildings.edit', compact('building'));
     }
 
     /**
@@ -69,7 +71,25 @@ class BuildingController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        //
+        $building = Building::findOrFail($id);
+
+        $request->validate([
+            'code' => 'required|max:20|unique:buildings,code,' . $building->id,
+            'name' => 'required|max:255',
+            'floors' => 'required|integer|min:1',
+            'description' => 'nullable|max:500',
+        ]);
+
+        $building->update($request->only([
+            'code',
+            'name',
+            'floors',
+            'description',
+        ]));
+
+        return redirect()
+            ->route('buildings.index')
+            ->with('success', 'Cập nhật tòa nhà thành công.');
     }
 
     /**
@@ -77,6 +97,12 @@ class BuildingController extends Controller
      */
     public function destroy(string $id)
     {
-        //
+        $building = Building::findOrFail($id);
+
+        $building->delete();
+
+        return redirect()
+            ->route('buildings.index')
+            ->with('success', 'Xóa tòa nhà thành công.');
     }
 }

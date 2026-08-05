@@ -52,10 +52,10 @@
                         @csrf
                         @method('DELETE')
 
-                        <button type="submit">
+                        <button type="submit"
+                            onclick="return confirm('Bạn có chắc muốn xóa tòa nhà này?')">
                             Xóa
                         </button>
-
                     </form>
                 </td>
             </tr>
