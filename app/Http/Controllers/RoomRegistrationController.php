@@ -54,21 +54,23 @@ class RoomRegistrationController extends Controller
     // ---------------------------------------------------
     public function cancel($id)
     {
-        $registration = RoomRegistration::findOrFail($id);
+        // Tìm đơn đăng ký theo ID
+        $registration = RoomRegistration::find($id);
 
-        // Chỉ cho phép hủy nếu đơn vẫn đang ở trạng thái chờ duyệt (pending)
-        if ($registration->status !== 'pending') {
-            return response()->json([
-                'message' => 'Không thể hủy đơn vì đơn đã được cán bộ xử lý.'
-            ], 400);
+        // Kiểm tra xem đơn có tồn tại không
+        if (!$registration) {
+            return response()->json(['message' => 'Không tìm thấy đơn đăng ký này.'], 404);
         }
 
-        // Xóa đơn khỏi cơ sở dữ liệu
+        // Kiểm tra trạng thái, chỉ cho phép hủy đơn pending
+        if ($registration->status !== 'pending') {
+            return response()->json(['message' => 'Lỗi: Chỉ có thể hủy đơn đang ở trạng thái chờ duyệt.'], 400);
+        }
+
+        // Thực hiện xóa đơn
         $registration->delete();
 
-        return response()->json([
-            'message' => 'Đã hủy đăng ký thành công.'
-        ]);
+        return response()->json(['message' => 'Hủy đơn đăng ký thành công!']);
     }
 
     // ---------------------------------------------------

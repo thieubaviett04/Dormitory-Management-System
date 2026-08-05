@@ -63,6 +63,7 @@
             padding: 15px;
             margin-bottom: 15px;
             border-radius: 4px;
+            position: relative;
         }
 
         .status-pending {
@@ -78,6 +79,21 @@
         .status-rejected {
             color: #dc3545;
             font-weight: bold;
+        }
+
+        .btn-cancel {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+
+        .btn-cancel:hover {
+            background-color: #c82333;
         }
     </style>
 </head>
@@ -104,11 +120,10 @@
             const resultDiv = document.getElementById('result');
             resultDiv.innerHTML = 'Đang tìm kiếm...';
 
-            // Gọi API check trạng thái theo phương thức GET
             fetch(`/registration/status/${studentId}`)
                 .then(response => response.json())
                 .then(result => {
-                    resultDiv.innerHTML = ''; // Xóa chữ "Đang tìm kiếm"
+                    resultDiv.innerHTML = '';
 
                     const data = result.data || result;
 
@@ -117,12 +132,17 @@
                         return;
                     }
 
-                    // In kết quả ra màn hình
                     data.forEach(item => {
                         let statusText = item.status;
                         let statusClass = '';
+                        let cancelBtnHtml = ''; // Biến chứa mã HTML của nút Hủy
 
-                        if (statusText === 'pending') { statusText = 'Đang chờ duyệt'; statusClass = 'status-pending'; }
+                        if (statusText === 'pending') {
+                            statusText = 'Đang chờ duyệt';
+                            statusClass = 'status-pending';
+                            // Chỉ hiển thị nút hủy nếu trạng thái là pending
+                            cancelBtnHtml = `<button class="btn-cancel" onclick="cancelRegistration(${item.id}, ${studentId})">Hủy đơn này</button>`;
+                        }
                         else if (statusText === 'approved') { statusText = 'Đã duyệt'; statusClass = 'status-approved'; }
                         else if (statusText === 'rejected') { statusText = 'Bị từ chối'; statusClass = 'status-rejected'; }
 
@@ -132,6 +152,7 @@
                             <p><strong>ID Phòng:</strong> ${item.room_id}</p>
                             <p><strong>Ngày tạo:</strong> ${new Date(item.created_at).toLocaleDateString('vi-VN')}</p>
                             <p><strong>Trạng thái:</strong> <span class="${statusClass}">${statusText}</span></p>
+                            ${cancelBtnHtml}
                         </div>
                     `;
                     });
@@ -139,6 +160,30 @@
                 .catch(error => {
                     console.error('Lỗi:', error);
                     resultDiv.innerHTML = '<p style="color: red; text-align: center;">Lỗi kết nối đến máy chủ!</p>';
+                });
+        }
+
+        // Hàm xử lý khi bấm nút Hủy đơn
+        function cancelRegistration(registrationId, studentId) {
+            if (!confirm(`Bạn có chắc chắn muốn hủy đơn đăng ký #${registrationId} không? Hành động này không thể hoàn tác.`)) {
+                return;
+            }
+
+            fetch(`/registration/cancel/${registrationId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Accept': 'application/json'
+                }
+            })
+                .then(response => response.json())
+                .then(result => {
+                    alert(result.message);
+                    // Cập nhật lại giao diện ngay lập tức bằng cách gọi lại hàm tìm kiếm
+                    checkStatus();
+                })
+                .catch(error => {
+                    console.error('Lỗi:', error);
+                    alert('Có lỗi xảy ra khi hủy đơn!');
                 });
         }
     </script>
