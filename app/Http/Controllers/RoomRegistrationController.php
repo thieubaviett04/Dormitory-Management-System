@@ -117,13 +117,16 @@ class RoomRegistrationController extends Controller
     // ---------------------------------------------------
     public function waitlist()
     {
-        // Lấy toàn bộ danh sách các đơn đang bị đưa vào hàng chờ (waitlist)
-        $waitlistRegistrations = RoomRegistration::where('status', 'waitlist')->get();
+        // Dùng lệnh join để nối bảng room_registrations với bảng students
+        $registrations = RoomRegistration::join('students', 'room_registrations.student_id', '=', 'students.id')
+            ->where('room_registrations.status', 'pending')
+            // Chọn các cột muốn lấy ra
+            ->select('room_registrations.*', 'students.student_code', 'students.full_name')
+            ->get();
 
         return response()->json([
-            'message' => 'Danh sách sinh viên đang chờ phòng.',
-            'total' => $waitlistRegistrations->count(),
-            'data' => $waitlistRegistrations
+            'message' => 'Lấy danh sách thành công.',
+            'data' => $registrations
         ]);
     }
 }
