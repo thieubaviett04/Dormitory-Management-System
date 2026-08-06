@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Enums\ViolationStatus;
 
 class ViolationRecord extends Model
 {
@@ -17,6 +18,7 @@ class ViolationRecord extends Model
 
     protected $casts = [
         'record_date' => 'date',
+        'status' => ViolationStatus::class,
     ];
 
     public function violationType()

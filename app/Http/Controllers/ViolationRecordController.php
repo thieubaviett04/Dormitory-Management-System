@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ViolationRecord;
+use App\Enums\ViolationStatus;
 use Illuminate\Http\Request;
 
 class ViolationRecordController extends Controller
@@ -13,8 +14,8 @@ class ViolationRecordController extends Controller
 
         $stats = [
             'total' => $records->count(),
-            'pending' => $records->where('status', 'pending')->count(),
-            'resolved' => $records->where('status', 'resolved')->count(),
+            'pending' => $records->where('status', ViolationStatus::Pending)->count(),
+            'resolved' => $records->where('status', ViolationStatus::Resolved)->count(),
         ];
 
         return view('violations.index', compact('records', 'stats'));

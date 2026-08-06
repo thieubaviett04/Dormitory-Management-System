@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Enums\InvoiceStatus;
+use App\Enums\PaymentMethod;
 
 class Invoice extends Model
 {
@@ -19,7 +21,9 @@ class Invoice extends Model
 
     protected $casts = [
         'paid_at' => 'datetime',
-        'billing_month' => 'date'
+        'billing_month' => 'date',
+        'status' => InvoiceStatus::class,
+        'payment_method' => PaymentMethod::class
     ];
 
     public function items()
