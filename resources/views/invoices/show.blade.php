@@ -26,7 +26,7 @@
         <section class="grid grid-cols-2 gap-8 mb-10">
             <div class="space-y-1">
                 <h3 class="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Đối tượng thanh toán</h3>
-                <p class="font-medium text-lg">Phòng số: {{ $invoice->room_id + 100 }}</p>
+                <p class="font-medium text-lg">Phòng: {{ $invoice->room ? ($invoice->room->building->code . ' - ' . $invoice->room->room_number) : 'N/A' }}</p>
                 <p class="text-muted-foreground text-sm">Đại diện ID: {{ $invoice->student_id ?? 'Chưa xác định' }}</p>
             </div>
             <div class="text-right space-y-1">
