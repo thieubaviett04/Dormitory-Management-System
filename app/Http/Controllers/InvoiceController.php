@@ -8,6 +8,8 @@ use App\Models\ServiceType;
 use App\Models\InvoiceItem;
 use App\Models\Room;
 use Illuminate\Http\Request;
+use App\Enums\InvoiceStatus;
+use App\Enums\PaymentMethod;
 
 class InvoiceController extends Controller
 {
@@ -26,9 +28,9 @@ class InvoiceController extends Controller
         // Tính toán số liệu thống kê thực tế dựa trên danh sách đã lọc
         $stats = [
             'total' => $invoices->count(),
-            'paid' => $invoices->where('status', 'paid')->count(),
-            'unpaid' => $invoices->where('status', 'unpaid')->count(),
-            'total_revenue' => $invoices->where('status', 'paid')->sum('total_amount'),
+            'paid' => $invoices->where('status', InvoiceStatus::Paid)->count(),
+            'unpaid' => $invoices->where('status', InvoiceStatus::Unpaid)->count(),
+            'total_revenue' => $invoices->where('status', InvoiceStatus::Paid)->sum('total_amount'),
         ];
 
         $rooms = Room::with('building')->orderBy('building_id')->orderBy('room_number')->get();
@@ -55,12 +57,14 @@ class InvoiceController extends Controller
             'room_id' => 'required|integer|min:1',
             'billing_month' => 'required|date_format:Y-m',
             'electricity_start' => 'required|numeric|min:0',
-            'electricity_end' => 'required|numeric|gte:electricity_start',
+            'electricity_end' => 'required|numeric|gt:0|gt:electricity_start',
             'water_start' => 'required|numeric|min:0',
-            'water_end' => 'required|numeric|gte:water_start',
+            'water_end' => 'required|numeric|gt:0|gt:water_start',
         ], [
-            'electricity_end.gte' => 'Chỉ số điện mới không được nhỏ hơn chỉ số điện cũ.',
-            'water_end.gte' => 'Chỉ số nước mới không được nhỏ hơn chỉ số nước cũ.',
+            'room_id.required' => 'Vui lòng chọn phòng áp dụng.',
+            'room_id.min'      => 'Vui lòng chọn phòng áp dụng.',
+            'electricity_end.gt'  => 'Chỉ số điện cuối phải lớn hơn chỉ số đầu và khác 0.',
+            'water_end.gt'        => 'Chỉ số nước cuối phải lớn hơn chỉ số đầu và khác 0.',
         ]);
 
         $monthDate = $request->billing_month . '-01';
@@ -101,7 +105,7 @@ class InvoiceController extends Controller
             'student_id' => null,
             'billing_month' => $monthDate,
             'total_amount' => $totalAmount,
-            'status' => 'unpaid',
+            'status' => InvoiceStatus::Unpaid,
         ]);
 
         InvoiceItem::create([
@@ -149,14 +153,14 @@ class InvoiceController extends Controller
     public function pay(Request $request, $id)
     {
         $request->validate([
-            'payment_method' => 'required|in:bank_transfer,cash',
+            'payment_method' => ['required', new \Illuminate\Validation\Rules\Enum(PaymentMethod::class)]
         ]);
 
         $invoice = Invoice::findOrFail($id);
         $invoice->update([
-            'status' => 'paid',
+            'status' => InvoiceStatus::Paid,
             'paid_at' => now(),
-            'payment_method' => $request->payment_method,
+            'payment_method' => PaymentMethod::from($request->payment_method),
         ]);
 
         return redirect()->route('invoice.index')->with('success', "Đã xác nhận thanh toán thành công cho hóa đơn {$invoice->invoice_code}!");
