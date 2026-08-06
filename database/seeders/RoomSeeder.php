@@ -67,7 +67,7 @@ class RoomSeeder extends Seeder
                 'room_number' => '101',
                 'floor' => 1,
                 'capacity' => 2,
-                'status' => 'full',
+                'status' => 'available',
             ]);
         }
     }

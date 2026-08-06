@@ -81,6 +81,16 @@
             font-weight: bold;
         }
 
+        .status-waitlist {
+            color: #fd7e14;
+            font-weight: bold;
+        }
+
+        .status-cancelled {
+            color: #6c757d;
+            font-weight: bold;
+        }
+
         .btn-cancel {
             background-color: #dc3545;
             color: white;
@@ -110,7 +120,21 @@
     </div>
 
     <script>
-        function checkStatus() {
+        const statusPresentation = {
+            pending: ['Đang chờ duyệt', 'status-pending'],
+            approved: ['Đã duyệt', 'status-approved'],
+            rejected: ['Bị từ chối', 'status-rejected'],
+            waitlist: ['Danh sách chờ', 'status-waitlist'],
+            cancelled: ['Đã hủy', 'status-cancelled']
+        };
+
+        function escapeHtml(value) {
+            const element = document.createElement('div');
+            element.textContent = value ?? '';
+            return element.innerHTML;
+        }
+
+        async function checkStatus() {
             const studentId = document.getElementById('student_id').value;
             if (!studentId) {
                 alert("Vui lòng nhập ID Sinh viên!");
@@ -120,71 +144,80 @@
             const resultDiv = document.getElementById('result');
             resultDiv.innerHTML = 'Đang tìm kiếm...';
 
-            fetch(`/registration/status/${studentId}`)
-                .then(response => response.json())
-                .then(result => {
-                    resultDiv.innerHTML = '';
+            try {
+                const response = await fetch(`/registration/status/${studentId}`, {
+                    headers: { 'Accept': 'application/json' }
+                });
+                const result = await response.json();
 
-                    const data = result.data || result;
+                if (!response.ok) {
+                    throw new Error(result.message || 'Không thể tra cứu đơn đăng ký.');
+                }
 
-                    if (!data || data.length === 0 || data.message === "Sinh viên này chưa có đơn đăng ký nào.") {
-                        resultDiv.innerHTML = '<p style="color: red; text-align: center;">Không tìm thấy đơn đăng ký nào!</p>';
-                        return;
-                    }
+                resultDiv.innerHTML = '';
+                result.data.forEach(item => {
+                    const [statusText, statusClass] = statusPresentation[item.status] || [item.status, ''];
+                    const canCancel = ['pending', 'waitlist'].includes(item.status);
+                    const roomName = item.room
+                        ? `${item.room.building?.code || ''}-${item.room.room_number}`
+                        : `#${item.room_id}`;
+                    const rejectedReason = item.rejected_reason
+                        ? `<p><strong>Lý do từ chối:</strong> ${escapeHtml(item.rejected_reason)}</p>`
+                        : '';
+                    const cancellationReason = item.cancellation_reason
+                        ? `<p><strong>Lý do hủy:</strong> ${escapeHtml(item.cancellation_reason)}</p>`
+                        : '';
+                    const cancelButton = canCancel
+                        ? `<button class="btn-cancel" onclick="cancelRegistration(${item.id})">Hủy đơn này</button>`
+                        : '';
 
-                    data.forEach(item => {
-                        let statusText = item.status;
-                        let statusClass = '';
-                        let cancelBtnHtml = ''; // Biến chứa mã HTML của nút Hủy
-
-                        if (statusText === 'pending') {
-                            statusText = 'Đang chờ duyệt';
-                            statusClass = 'status-pending';
-                            // Chỉ hiển thị nút hủy nếu trạng thái là pending
-                            cancelBtnHtml = `<button class="btn-cancel" onclick="cancelRegistration(${item.id}, ${studentId})">Hủy đơn này</button>`;
-                        }
-                        else if (statusText === 'approved') { statusText = 'Đã duyệt'; statusClass = 'status-approved'; }
-                        else if (statusText === 'rejected') { statusText = 'Bị từ chối'; statusClass = 'status-rejected'; }
-
-                        resultDiv.innerHTML += `
+                    resultDiv.innerHTML += `
                         <div class="card">
                             <p><strong>Mã Đơn:</strong> #${item.id}</p>
-                            <p><strong>ID Phòng:</strong> ${item.room_id}</p>
-                            <p><strong>Ngày tạo:</strong> ${new Date(item.created_at).toLocaleDateString('vi-VN')}</p>
-                            <p><strong>Trạng thái:</strong> <span class="${statusClass}">${statusText}</span></p>
-                            ${cancelBtnHtml}
+                            <p><strong>Phòng nguyện vọng:</strong> ${escapeHtml(roomName)}</p>
+                            <p><strong>Ngày đăng ký:</strong> ${new Date(item.registered_at).toLocaleDateString('vi-VN')}</p>
+                            <p><strong>Trạng thái:</strong> <span class="${statusClass}">${escapeHtml(statusText)}</span></p>
+                            ${rejectedReason}
+                            ${cancellationReason}
+                            ${cancelButton}
                         </div>
                     `;
-                    });
-                })
-                .catch(error => {
-                    console.error('Lỗi:', error);
-                    resultDiv.innerHTML = '<p style="color: red; text-align: center;">Lỗi kết nối đến máy chủ!</p>';
                 });
+            } catch (error) {
+                console.error('Lỗi:', error);
+                resultDiv.innerHTML = `<p style="color: red; text-align: center;">${escapeHtml(error.message)}</p>`;
+            }
         }
 
-        // Hàm xử lý khi bấm nút Hủy đơn
-        function cancelRegistration(registrationId, studentId) {
-            if (!confirm(`Bạn có chắc chắn muốn hủy đơn đăng ký #${registrationId} không? Hành động này không thể hoàn tác.`)) {
+        async function cancelRegistration(registrationId) {
+            if (!confirm(`Bạn có chắc chắn muốn hủy đơn đăng ký #${registrationId} không?`)) {
                 return;
             }
 
-            fetch(`/registration/cancel/${registrationId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Accept': 'application/json'
-                }
-            })
-                .then(response => response.json())
-                .then(result => {
-                    alert(result.message);
-                    // Cập nhật lại giao diện ngay lập tức bằng cách gọi lại hàm tìm kiếm
-                    checkStatus();
-                })
-                .catch(error => {
-                    console.error('Lỗi:', error);
-                    alert('Có lỗi xảy ra khi hủy đơn!');
+            const cancellationReason = prompt('Lý do hủy (không bắt buộc):') || null;
+
+            try {
+                const response = await fetch(`/registration/cancel/${registrationId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ cancellation_reason: cancellationReason })
                 });
+                const result = await response.json();
+
+                if (!response.ok) {
+                    const validationMessages = Object.values(result.errors || {}).flat();
+                    throw new Error(validationMessages[0] || result.message || 'Không thể hủy đơn đăng ký.');
+                }
+
+                alert(result.message);
+                checkStatus();
+            } catch (error) {
+                console.error('Lỗi:', error);
+                alert(error.message || 'Có lỗi xảy ra khi hủy đơn!');
+            }
         }
     </script>
 

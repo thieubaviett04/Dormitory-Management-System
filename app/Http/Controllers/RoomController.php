@@ -2,9 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Models\Room;
 use App\Models\Building;
+use App\Models\Room;
+use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class RoomController extends Controller
 {
@@ -42,6 +43,19 @@ class RoomController extends Controller
             'capacity' => 'required|integer|min:1',
             'status' => 'required|in:available,full,maintenance',
         ]);
+
+        $activeAllocationCount = $room->allocations()->active()->count();
+        if ((int) $request->capacity < $activeAllocationCount) {
+            throw ValidationException::withMessages([
+                'capacity' => 'Sức chứa không được nhỏ hơn số sinh viên đang ở trong phòng.',
+            ]);
+        }
+
+        if ($request->status === 'maintenance' && $activeAllocationCount > 0) {
+            throw ValidationException::withMessages([
+                'status' => 'Phải chuyển hoặc trả hết giường trước khi đưa phòng vào bảo trì.',
+            ]);
+        }
 
         Room::create([
             'building_id' => $request->building_id,
@@ -109,6 +123,12 @@ class RoomController extends Controller
     public function destroy(string $id)
     {
         $room = Room::findOrFail($id);
+
+        if ($room->allocations()->exists()) {
+            throw ValidationException::withMessages([
+                'room' => 'Không thể xóa phòng đã có lịch sử phân giường.',
+            ]);
+        }
 
         $room->delete();
 

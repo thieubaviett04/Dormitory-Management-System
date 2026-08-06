@@ -139,6 +139,11 @@
                 <i data-lucide="bed" class="h-4 w-4"></i>
                 <span>Giường</span>
             </a>
+
+            <a href="{{ route('contracts.index') }}" class="flex items-center space-x-3 px-3 py-2 rounded-md {{ Route::is('contracts.*') ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground' }} text-sm font-medium transition-colors">
+                <i data-lucide="file-signature" class="h-4 w-4"></i>
+                <span>Hợp đồng</span>
+            </a>
         </nav>
 
         <!-- Footer Profile -->

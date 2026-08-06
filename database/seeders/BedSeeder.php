@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use App\Models\Room;
 use App\Models\Bed;
+use App\Models\Room;
 use Illuminate\Database\Seeder;
 
 class BedSeeder extends Seeder
@@ -17,19 +17,14 @@ class BedSeeder extends Seeder
 
         foreach ($rooms as $room) {
             for ($i = 1; $i <= $room->capacity; $i++) {
-                // Đặt một số giường là occupied để dữ liệu sinh động
                 $status = 'available';
-                if ($room->status === 'full') {
-                    $status = 'occupied';
-                } elseif ($room->status === 'maintenance') {
+                if ($room->status === 'maintenance') {
                     $status = 'maintenance';
-                } elseif ($i === 2) {
-                    $status = 'occupied';
                 }
 
                 Bed::create([
                     'room_id' => $room->id,
-                    'bed_number' => 'G' . $i,
+                    'bed_number' => 'G'.$i,
                     'status' => $status,
                 ]);
             }

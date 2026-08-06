@@ -2,133 +2,109 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Models\Student;
+use App\Enums\RoomRegistrationStatus;
+use App\Http\Requests\CancelRoomRegistrationRequest;
+use App\Http\Requests\StoreRoomRegistrationRequest;
+use App\Http\Requests\UpdateRoomRegistrationStatusRequest;
 use App\Models\RoomRegistration;
+use App\Models\Student;
+use App\Services\RoomRegistrationService;
+use Illuminate\Http\JsonResponse;
 
 class RoomRegistrationController extends Controller
 {
-    // ---------------------------------------------------
-    // Chức năng 1: Sinh viên đăng ký chỗ ở
-    // ---------------------------------------------------
-    public function store(Request $request)
+    public function __construct(private readonly RoomRegistrationService $service) {}
+
+    public function store(StoreRoomRegistrationRequest $request): JsonResponse
     {
-        // Kiểm tra dữ liệu đầu vào
-        $validated = $request->validate([
-            'student_code' => 'required|string|max:20',
-            'full_name' => 'required|string|max:100',
-            'email' => 'required|email',
-            'phone_number' => 'nullable|string|max:15',
-            'gender' => 'required|in:male,female,other',
-            'date_of_birth' => 'required|date',
-            'room_id' => 'required|integer',
-        ]);
-
-        // Tìm sinh viên hoặc tạo mới nếu chưa có
-        $student = Student::firstOrCreate(
-            ['student_code' => $validated['student_code']],
-            [
-                'full_name' => $validated['full_name'],
-                'email' => $validated['email'],
-                'phone_number' => $validated['phone_number'],
-                'gender' => $validated['gender'],
-                'date_of_birth' => $validated['date_of_birth'],
-            ]
-        );
-
-        // Tạo đơn đăng ký mới (Mặc định trạng thái là 'pending')
-        $registration = RoomRegistration::create([
-            'student_id' => $student->id,
-            'room_id' => $validated['room_id'],
-            'status' => 'pending',
-        ]);
+        $registration = $this->service->register($request->validated());
 
         return response()->json([
             'message' => 'Đăng ký phòng thành công! Vui lòng chờ cán bộ duyệt.',
-            'data' => $registration
+            'data' => $registration->load(['student', 'room.building']),
         ], 201);
     }
 
-    // ---------------------------------------------------
-    // Chức năng 2: Hủy đăng ký
-    // ---------------------------------------------------
-    public function cancel($id)
-    {
-        // Tìm đơn đăng ký theo ID
-        $registration = RoomRegistration::find($id);
+    public function cancel(
+        CancelRoomRegistrationRequest $request,
+        RoomRegistration $roomRegistration,
+    ): JsonResponse {
+        $registration = $this->service->cancel(
+            $roomRegistration,
+            $request->validated('cancellation_reason'),
+        );
 
-        // Kiểm tra xem đơn có tồn tại không
-        if (!$registration) {
-            return response()->json(['message' => 'Không tìm thấy đơn đăng ký này.'], 404);
-        }
-
-        // Kiểm tra trạng thái, chỉ cho phép hủy đơn pending
-        if ($registration->status !== 'pending') {
-            return response()->json(['message' => 'Lỗi: Chỉ có thể hủy đơn đang ở trạng thái chờ duyệt.'], 400);
-        }
-
-        // Thực hiện xóa đơn
-        $registration->delete();
-
-        return response()->json(['message' => 'Hủy đơn đăng ký thành công!']);
+        return response()->json([
+            'message' => 'Hủy đơn đăng ký thành công!',
+            'data' => $registration,
+        ]);
     }
 
-    // ---------------------------------------------------
-    // Chức năng 3: Xem trạng thái
-    // ---------------------------------------------------
-    public function showStatus($student_id)
+    public function showStatus(Student $student): JsonResponse
     {
-        // Lấy tất cả các đơn đăng ký của một sinh viên cụ thể
-        $registrations = RoomRegistration::where('student_id', $student_id)->get();
+        $registrations = $student->roomRegistrations()
+            ->with('room.building')
+            ->latest('registered_at')
+            ->get();
 
         if ($registrations->isEmpty()) {
-            return response()->json(['message' => 'Sinh viên này chưa có đơn đăng ký nào.'], 404);
+            return response()->json([
+                'message' => 'Sinh viên này chưa có đơn đăng ký nào.',
+            ], 404);
         }
 
         return response()->json([
             'message' => 'Lấy thông tin trạng thái thành công.',
-            'data' => $registrations
+            'data' => $registrations,
         ]);
     }
 
-    // ---------------------------------------------------
-    // Chức năng 4: Cán bộ duyệt / từ chối
-    // ---------------------------------------------------
-    public function updateStatus(Request $request, $id)
-    {
-        // Cán bộ chỉ được phép gửi lên 1 trong 3 trạng thái này
-        $validated = $request->validate([
-            'status' => 'required|in:approved,rejected,waitlist'
-        ]);
-
-        $registration = RoomRegistration::findOrFail($id);
-
-        // Cập nhật trạng thái mới
-        $registration->update([
-            'status' => $validated['status']
-        ]);
+    public function updateStatus(
+        UpdateRoomRegistrationStatusRequest $request,
+        RoomRegistration $roomRegistration,
+    ): JsonResponse {
+        $registration = $this->service->transition(
+            $roomRegistration,
+            RoomRegistrationStatus::from($request->validated('status')),
+            $request->user()?->id,
+            $request->validated('rejected_reason'),
+        );
 
         return response()->json([
             'message' => 'Cập nhật trạng thái đơn đăng ký thành công.',
-            'data' => $registration
+            'data' => $registration->load(['student', 'room.building', 'reviewer']),
         ]);
     }
 
-    // ---------------------------------------------------
-    // Chức năng 5: Quản lý danh sách chờ
-    // ---------------------------------------------------
-    public function waitlist()
+    public function pending(): JsonResponse
     {
-        // Dùng lệnh join để nối bảng room_registrations với bảng students
-        $registrations = RoomRegistration::join('students', 'room_registrations.student_id', '=', 'students.id')
-            ->where('room_registrations.status', 'pending')
-            // Chọn các cột muốn lấy ra
-            ->select('room_registrations.*', 'students.student_code', 'students.full_name')
+        return $this->registrationList(
+            RoomRegistrationStatus::Pending,
+            'Lấy danh sách đơn chờ duyệt thành công.',
+        );
+    }
+
+    public function waitlist(): JsonResponse
+    {
+        return $this->registrationList(
+            RoomRegistrationStatus::Waitlist,
+            'Lấy danh sách chờ thành công.',
+        );
+    }
+
+    private function registrationList(
+        RoomRegistrationStatus $status,
+        string $message,
+    ): JsonResponse {
+        $registrations = RoomRegistration::query()
+            ->with(['student', 'room.building'])
+            ->where('status', $status->value)
+            ->oldest('registered_at')
             ->get();
 
         return response()->json([
-            'message' => 'Lấy danh sách thành công.',
-            'data' => $registrations
+            'message' => $message,
+            'data' => $registrations,
         ]);
     }
 }
