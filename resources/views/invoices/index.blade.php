@@ -54,21 +54,21 @@
             }" x-ref="form" @click.away="open = false">
                 <div class="relative w-44">
                     <input type="hidden" name="month" x-model="value">
-                    <button type="button" @click="open = !open" 
-                            class="flex h-9 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring transition-all hover:bg-accent/50">
+                    <button type="button" @click="open = !open"
+                        class="flex h-9 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring transition-all hover:bg-accent/50">
                         <span x-text="formattedValue" class="text-foreground font-medium"></span>
                         <i data-lucide="calendar" class="h-4 w-4 opacity-50" :class="open ? 'text-primary opacity-100' : ''"></i>
                     </button>
 
-                    <div x-show="open" 
-                         x-transition:enter="transition ease-out duration-100"
-                         x-transition:enter-start="transform opacity-0 scale-95"
-                         x-transition:enter-end="transform opacity-100 scale-100"
-                         x-transition:leave="transition ease-in duration-75"
-                         x-transition:leave-start="transform opacity-100 scale-100"
-                         x-transition:leave-end="transform opacity-0 scale-95"
-                         class="absolute z-50 mt-1 w-64 right-0 rounded-md border border-border bg-popover p-3 text-popover-foreground shadow-md outline-none" style="display: none;">
-                        
+                    <div x-show="open"
+                        x-transition:enter="transition ease-out duration-100"
+                        x-transition:enter-start="transform opacity-0 scale-95"
+                        x-transition:enter-end="transform opacity-100 scale-100"
+                        x-transition:leave="transition ease-in duration-75"
+                        x-transition:leave-start="transform opacity-100 scale-100"
+                        x-transition:leave-end="transform opacity-0 scale-95"
+                        class="absolute z-50 mt-1 w-64 right-0 rounded-md border border-border bg-popover p-3 text-popover-foreground shadow-md outline-none" style="display: none;">
+
                         <div class="flex items-center justify-between pt-1 pb-4">
                             <button type="button" @click="year--" class="h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 inline-flex items-center justify-center rounded-md border border-border hover:bg-accent hover:text-accent-foreground transition-colors">
                                 <i data-lucide="chevron-left" class="h-4 w-4"></i>
@@ -78,14 +78,14 @@
                                 <i data-lucide="chevron-right" class="h-4 w-4"></i>
                             </button>
                         </div>
-                        
+
                         <div class="grid grid-cols-3 gap-2">
                             <template x-for="(monthName, index) in months" :key="index">
-                                <button type="button" 
-                                        @click="selectMonth(index)"
-                                        class="inline-flex h-9 items-center justify-center rounded-md text-sm transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-primary focus:text-primary-foreground focus:outline-none"
-                                        :class="(month === index + 1) ? 'bg-primary text-primary-foreground shadow hover:bg-primary hover:text-primary-foreground font-medium' : 'bg-transparent text-foreground'"
-                                        x-text="monthName">
+                                <button type="button"
+                                    @click="selectMonth(index)"
+                                    class="inline-flex h-9 items-center justify-center rounded-md text-sm transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-primary focus:text-primary-foreground focus:outline-none"
+                                    :class="(month === index + 1) ? 'bg-primary text-primary-foreground shadow hover:bg-primary hover:text-primary-foreground font-medium' : 'bg-transparent text-foreground'"
+                                    x-text="monthName">
                                 </button>
                             </template>
                         </div>
@@ -93,7 +93,7 @@
                 </div>
             </form>
 
-            <button @click="showCreatePanel = true" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2">
+            <button @click="showCreatePanel = true; $dispatch('reset-create-form')" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2">
                 <i data-lucide="plus" class="mr-2 h-4 w-4"></i> Tạo hóa đơn
             </button>
         </div>
@@ -176,7 +176,7 @@
                         <td class="p-4 align-middle text-muted-foreground">Tháng {{ $invoice->billing_month->format('m/Y') }}</td>
                         <td class="p-4 align-middle text-right font-medium">{{ number_format($invoice->total_amount) }} đ</td>
                         <td class="p-4 align-middle text-center">
-                            @if($invoice->status == 'paid')
+                            @if($invoice->status == \App\Enums\InvoiceStatus::Paid)
                             <div class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors border-transparent bg-emerald-100 text-emerald-800">
                                 Đã thanh toán
                             </div>
@@ -190,9 +190,9 @@
                             {{ $invoice->paid_at ? $invoice->paid_at->format('d/m/Y H:i') : '—' }}
                         </td>
                         <td class="p-4 align-middle text-muted-foreground">
-                            @if($invoice->payment_method == 'bank_transfer')
+                            @if($invoice->payment_method == \App\Enums\PaymentMethod::BankTransfer)
                             Chuyển khoản
-                            @elseif($invoice->payment_method == 'cash')
+                            @elseif($invoice->payment_method == \App\Enums\PaymentMethod::Cash)
                             Tiền mặt
                             @else
                             —
@@ -253,33 +253,67 @@
                                             <p class="text-sm text-muted-foreground mt-2">Nhập chỉ số điện nước sử dụng để hệ thống tự sinh hóa đơn.</p>
                                         </div>
                                         <div class="ml-3 flex h-7 items-center">
-                                            <button @click="showCreatePanel = false" type="button" class="relative rounded-md bg-background text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring">
+                                            <button @click="showCreatePanel = false; $dispatch('reset-create-form')" type="button" class="relative rounded-md bg-background text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring">
                                                 <i data-lucide="x" class="h-4 w-4"></i>
                                             </button>
                                         </div>
                                     </div>
                                 </div>
-                                <form action="{{ route('invoice.store') }}" method="POST" class="flex-1 flex flex-col">
+                                <form action="{{ route('invoice.store') }}" method="POST" class="flex-1 flex flex-col"
+                                    x-data="{
+                                        clientErrors: [],
+                                        showServerErrors: {{ $errors->any() ? 'true' : 'false' }},
+                                        validateAndSubmit(e) {
+                                            this.clientErrors = [];
+                                            const roomId = this.$el.querySelector('[name=room_id]').value;
+                                            const elStart = parseFloat(this.$el.querySelector('[name=electricity_start]').value) || 0;
+                                            const elEnd   = parseFloat(this.$el.querySelector('[name=electricity_end]').value)   || 0;
+                                            const wStart  = parseFloat(this.$el.querySelector('[name=water_start]').value)  || 0;
+                                            const wEnd    = parseFloat(this.$el.querySelector('[name=water_end]').value)    || 0;
+                                            const hasRoom = roomId && roomId !== '' && roomId !== '0';
+                                            const errors = [];
+                                            if (!hasRoom) errors.push('Vui lòng chọn phòng áp dụng.');
+                                            if (elEnd === 0 && wEnd === 0) {
+                                                errors.push('Vui lòng nhập số liệu điện và nước.');
+                                            } else {
+                                                if (elEnd <= 0)       errors.push('Chỉ số điện cuối phải lớn hơn 0.');
+                                                if (elEnd <= elStart) errors.push('Chỉ số điện cuối phải lớn hơn chỉ số đầu.');
+                                                if (wEnd  <= 0)       errors.push('Chỉ số nước cuối phải lớn hơn 0.');
+                                                if (wEnd  <= wStart)  errors.push('Chỉ số nước cuối phải lớn hơn chỉ số đầu.');
+                                            }
+                                            if (errors.length > 0) {
+                                                this.clientErrors = errors;
+                                                e.preventDefault();
+                                            }
+                                        }
+                                    }"
+                                    @submit="validateAndSubmit($event)"
+                                    @reset-create-form.window="clientErrors = []; showServerErrors = false; $el.reset()">
                                     @csrf
-                                    <div class="flex-1 px-6 py-6 space-y-6">
-                                        <!-- Hiển thị thông báo khi lỗi Validation -->
-                                        @if ($errors->any())
-                                        <div class="rounded-md border border-destructive/50 bg-destructive/10 p-4">
-                                            <div class="flex">
-                                                <i data-lucide="alert-circle" class="h-4 w-4 text-destructive mt-0.5 mr-2"></i>
-                                                <div>
-                                                    <h3 class="text-sm font-medium text-destructive">Lỗi nhập liệu:</h3>
-                                                    <div class="mt-2 text-sm text-destructive/80">
-                                                        <ul role="list" class="list-disc space-y-1 pl-5">
-                                                            @foreach ($errors->all() as $error)
-                                                            <li>{{ $error }}</li>
-                                                            @endforeach
-                                                        </ul>
-                                                    </div>
-                                                </div>
-                                            </div>
+                                    @if ($errors->any())
+                                    <div x-show="showServerErrors" class="mx-6 mt-6 p-3 rounded-md bg-red-50 text-red-600 text-sm border border-red-200">
+                                        <div class="flex items-center font-medium mb-1">
+                                            <i data-lucide="alert-circle" class="h-4 w-4 mr-2"></i> Lỗi nhập liệu
                                         </div>
-                                        @endif
+                                        <ul class="list-disc pl-5 space-y-1 text-xs">
+                                            @foreach ($errors->all() as $error)
+                                            <li>{{ $error }}</li>
+                                            @endforeach
+                                        </ul>
+                                    </div>
+                                    @endif
+                                    <div x-show="clientErrors.length > 0" class="mx-6 mt-6 p-3 rounded-md bg-red-50 text-red-600 text-sm border border-red-200" style="display:none">
+                                        <div class="flex items-center font-medium mb-1">
+                                            <i data-lucide="alert-circle" class="h-4 w-4 mr-2"></i> Lỗi nhập liệu
+                                        </div>
+                                        <ul class="list-disc pl-5 space-y-1 text-xs">
+                                            <template x-for="err in clientErrors" :key="err">
+                                                <li x-text="err"></li>
+                                            </template>
+                                        </ul>
+                                    </div>
+                                    <div class="flex-1 px-6 py-6 space-y-6">
+
 
                                         <div class="space-y-4">
                                             <div class="space-y-2">
@@ -289,7 +323,7 @@
                                                         if (selected == '{{ $room->id }}') selectedText = '{{ $room->building->code ?? '' }} - Phòng {{ $room->room_number }}';
                                                     @endforeach
                                                 " class="relative w-full">
-                                                    <input type="hidden" name="room_id" x-model="selected" required>
+                                                    <input type="hidden" name="room_id" x-model="selected">
 
                                                     <button type="button" @click="open = !open" @click.away="open = false"
                                                         class="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all hover:border-primary/50">
@@ -338,22 +372,22 @@
                                                     }
                                                 }" class="relative w-full" @click.away="open = false">
                                                     <input type="hidden" name="billing_month" x-model="value">
-                                                    
-                                                    <button type="button" @click="open = !open" 
-                                                            class="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all hover:border-primary/50">
+
+                                                    <button type="button" @click="open = !open"
+                                                        class="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all hover:border-primary/50">
                                                         <span x-text="formattedValue" :class="value ? 'text-foreground font-medium' : 'text-muted-foreground'"></span>
                                                         <i data-lucide="calendar-days" class="h-4 w-4 opacity-50" :class="open ? 'text-primary opacity-100' : ''"></i>
                                                     </button>
 
-                                                    <div x-show="open" 
-                                                         x-transition:enter="transition ease-out duration-100"
-                                                         x-transition:enter-start="transform opacity-0 scale-95"
-                                                         x-transition:enter-end="transform opacity-100 scale-100"
-                                                         x-transition:leave="transition ease-in duration-75"
-                                                         x-transition:leave-start="transform opacity-100 scale-100"
-                                                         x-transition:leave-end="transform opacity-0 scale-95"
-                                                         class="absolute z-50 mt-1 w-full rounded-md border border-border bg-popover p-3 text-popover-foreground shadow-md outline-none" style="display: none;">
-                                                        
+                                                    <div x-show="open"
+                                                        x-transition:enter="transition ease-out duration-100"
+                                                        x-transition:enter-start="transform opacity-0 scale-95"
+                                                        x-transition:enter-end="transform opacity-100 scale-100"
+                                                        x-transition:leave="transition ease-in duration-75"
+                                                        x-transition:leave-start="transform opacity-100 scale-100"
+                                                        x-transition:leave-end="transform opacity-0 scale-95"
+                                                        class="absolute z-50 mt-1 w-full rounded-md border border-border bg-popover p-3 text-popover-foreground shadow-md outline-none" style="display: none;">
+
                                                         <div class="flex items-center justify-between pt-1 pb-4">
                                                             <button type="button" @click="year--" class="h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 inline-flex items-center justify-center rounded-md border border-border hover:bg-accent hover:text-accent-foreground transition-colors">
                                                                 <i data-lucide="chevron-left" class="h-4 w-4"></i>
@@ -363,14 +397,14 @@
                                                                 <i data-lucide="chevron-right" class="h-4 w-4"></i>
                                                             </button>
                                                         </div>
-                                                        
+
                                                         <div class="grid grid-cols-4 gap-2">
                                                             <template x-for="(monthName, index) in months" :key="index">
-                                                                <button type="button" 
-                                                                        @click="selectMonth(index)"
-                                                                        class="inline-flex h-9 items-center justify-center rounded-md text-sm transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-primary focus:text-primary-foreground focus:outline-none"
-                                                                        :class="(month === index + 1) ? 'bg-primary text-primary-foreground shadow hover:bg-primary hover:text-primary-foreground font-medium' : 'bg-transparent text-foreground'"
-                                                                        x-text="monthName">
+                                                                <button type="button"
+                                                                    @click="selectMonth(index)"
+                                                                    class="inline-flex h-9 items-center justify-center rounded-md text-sm transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-primary focus:text-primary-foreground focus:outline-none"
+                                                                    :class="(month === index + 1) ? 'bg-primary text-primary-foreground shadow hover:bg-primary hover:text-primary-foreground font-medium' : 'bg-transparent text-foreground'"
+                                                                    x-text="monthName">
                                                                 </button>
                                                             </template>
                                                         </div>
@@ -386,11 +420,11 @@
                                             <div class="grid grid-cols-2 gap-4">
                                                 <div class="space-y-2">
                                                     <label class="text-xs text-muted-foreground">Chỉ số đầu</label>
-                                                    <input type="number" name="electricity_start" value="{{ old('electricity_start', 0) }}" min="0" oninput="if(this.value < 0) this.value = 0;" required class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+                                                    <input type="number" name="electricity_start" value="{{ old('electricity_start', '0') }}" min="0" onfocus="if(this.value=='0')this.value=''" onblur="if(this.value==='')this.value='0'" oninput="if(this.value < 0) this.value = 0;" @change="dataEntered = true" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
                                                 </div>
                                                 <div class="space-y-2">
                                                     <label class="text-xs text-muted-foreground">Chỉ số cuối</label>
-                                                    <input type="number" name="electricity_end" value="{{ old('electricity_end', 0) }}" min="0" oninput="if(this.value < 0) this.value = 0;" required class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+                                                    <input type="number" name="electricity_end" value="{{ old('electricity_end', '0') }}" min="0" onfocus="if(this.value=='0')this.value=''" onblur="if(this.value==='')this.value='0'" oninput="if(this.value < 0) this.value = 0;" @change="dataEntered = true" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
                                                 </div>
                                             </div>
                                         </div>
@@ -402,18 +436,18 @@
                                             <div class="grid grid-cols-2 gap-4">
                                                 <div class="space-y-2">
                                                     <label class="text-xs text-muted-foreground">Chỉ số đầu</label>
-                                                    <input type="number" name="water_start" value="{{ old('water_start', 0) }}" min="0" oninput="if(this.value < 0) this.value = 0;" required class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+                                                    <input type="number" name="water_start" value="{{ old('water_start', '0') }}" min="0" onfocus="if(this.value=='0')this.value=''" onblur="if(this.value==='')this.value='0'" oninput="if(this.value < 0) this.value = 0;" @change="dataEntered = true" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
                                                 </div>
                                                 <div class="space-y-2">
                                                     <label class="text-xs text-muted-foreground">Chỉ số cuối</label>
-                                                    <input type="number" name="water_end" value="{{ old('water_end', 0) }}" min="0" oninput="if(this.value < 0) this.value = 0;" required class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+                                                    <input type="number" name="water_end" value="{{ old('water_end', '0') }}" min="0" onfocus="if(this.value=='0')this.value=''" onblur="if(this.value==='')this.value='0'" oninput="if(this.value < 0) this.value = 0;" @change="dataEntered = true" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
                                     <!-- Footer -->
                                     <div class="border-t border-border px-6 py-4 bg-muted/30 flex justify-end gap-3">
-                                        <button type="button" @click="showCreatePanel = false" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2">
+                                        <button type="button" @click="showCreatePanel = false; $dispatch('reset-create-form')" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2">
                                             Hủy
                                         </button>
                                         <button type="submit" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2">

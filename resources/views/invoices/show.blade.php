@@ -31,12 +31,12 @@
             </div>
             <div class="text-right space-y-1">
                 <h3 class="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Trạng thái</h3>
-                @if($invoice->status == 'paid')
+                @if($invoice->status == \App\Enums\InvoiceStatus::Paid)
                 <div class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold border-transparent bg-emerald-100 text-emerald-800">
                     <i data-lucide="check-circle-2" class="mr-1.5 h-3 w-3"></i> ĐÃ THANH TOÁN
                 </div>
                 <p class="text-xs text-muted-foreground mt-2">Lúc: {{ $invoice->paid_at->format('d/m/Y H:i') }}</p>
-                <p class="text-xs text-muted-foreground">PT: {{ $invoice->payment_method == 'bank_transfer' ? 'CHUYỂN KHOẢN' : 'TIỀN MẶT' }}</p>
+                <p class="text-xs text-muted-foreground">PT: {{ $invoice->payment_method == \App\Enums\PaymentMethod::BankTransfer ? 'CHUYỂN KHOẢN' : 'TIỀN MẶT' }}</p>
                 @else
                 <div class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold border-transparent bg-amber-100 text-amber-800">
                     <i data-lucide="clock" class="mr-1.5 h-3 w-3"></i> CHƯA THANH TOÁN
