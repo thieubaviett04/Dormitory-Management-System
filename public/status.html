@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tra Cứu Trạng Thái</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f7f6;
+            padding-top: 50px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            background: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 400px;
+            text-align: center;
+        }
+
+        h2 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #17a2b8;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #138496;
+        }
+
+        #result {
+            margin-top: 20px;
+            text-align: left;
+        }
+
+        .card {
+            background: #f8f9fa;
+            border-left: 5px solid #ccc;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+            position: relative;
+        }
+
+        .status-pending {
+            color: #ffc107;
+            font-weight: bold;
+        }
+
+        .status-approved {
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .status-rejected {
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        .btn-cancel {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+
+        .btn-cancel:hover {
+            background-color: #c82333;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h2>Tra Cứu Đơn Ký Túc Xá</h2>
+        <p style="text-align: left; font-size: 14px; color: #666;">Nhập ID Hệ thống của sinh viên để tra cứu:</p>
+        <input type="number" id="student_id" placeholder="Ví dụ: 1">
+        <button onclick="checkStatus()">Tra Cứu Ngay</button>
+
+        <div id="result"></div>
+    </div>
+
+    <script>
+        function checkStatus() {
+            const studentId = document.getElementById('student_id').value;
+            if (!studentId) {
+                alert("Vui lòng nhập ID Sinh viên!");
+                return;
+            }
+
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Đang tìm kiếm...';
+
+            fetch(`/registration/status/${studentId}`)
+                .then(response => response.json())
+                .then(result => {
+                    resultDiv.innerHTML = '';
+
+                    const data = result.data || result;
+
+                    if (!data || data.length === 0 || data.message === "Sinh viên này chưa có đơn đăng ký nào.") {
+                        resultDiv.innerHTML = '<p style="color: red; text-align: center;">Không tìm thấy đơn đăng ký nào!</p>';
+                        return;
+                    }
+
+                    data.forEach(item => {
+                        let statusText = item.status;
+                        let statusClass = '';
+                        let cancelBtnHtml = ''; // Biến chứa mã HTML của nút Hủy
+
+                        if (statusText === 'pending') {
+                            statusText = 'Đang chờ duyệt';
+                            statusClass = 'status-pending';
+                            // Chỉ hiển thị nút hủy nếu trạng thái là pending
+                            cancelBtnHtml = `<button class="btn-cancel" onclick="cancelRegistration(${item.id}, ${studentId})">Hủy đơn này</button>`;
+                        }
+                        else if (statusText === 'approved') { statusText = 'Đã duyệt'; statusClass = 'status-approved'; }
+                        else if (statusText === 'rejected') { statusText = 'Bị từ chối'; statusClass = 'status-rejected'; }
+
+                        resultDiv.innerHTML += `
+                        <div class="card">
+                            <p><strong>Mã Đơn:</strong> #${item.id}</p>
+                            <p><strong>ID Phòng:</strong> ${item.room_id}</p>
+                            <p><strong>Ngày tạo:</strong> ${new Date(item.created_at).toLocaleDateString('vi-VN')}</p>
+                            <p><strong>Trạng thái:</strong> <span class="${statusClass}">${statusText}</span></p>
+                            ${cancelBtnHtml}
+                        </div>
+                    `;
+                    });
+                })
+                .catch(error => {
+                    console.error('Lỗi:', error);
+                    resultDiv.innerHTML = '<p style="color: red; text-align: center;">Lỗi kết nối đến máy chủ!</p>';
+                });
+        }
+
+        // Hàm xử lý khi bấm nút Hủy đơn
+        function cancelRegistration(registrationId, studentId) {
+            if (!confirm(`Bạn có chắc chắn muốn hủy đơn đăng ký #${registrationId} không? Hành động này không thể hoàn tác.`)) {
+                return;
+            }
+
+            fetch(`/registration/cancel/${registrationId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Accept': 'application/json'
+                }
+            })
+                .then(response => response.json())
+                .then(result => {
+                    alert(result.message);
+                    // Cập nhật lại giao diện ngay lập tức bằng cách gọi lại hàm tìm kiếm
+                    checkStatus();
+                })
+                .catch(error => {
+                    console.error('Lỗi:', error);
+                    alert('Có lỗi xảy ra khi hủy đơn!');
+                });
+        }
+    </script>
+
+</body>
+
+</html>
