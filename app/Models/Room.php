@@ -25,4 +25,9 @@ class Room extends Model
     {
         return $this->hasMany(Bed::class);
     }
+
+    public function roomRegistrations(): HasMany
+    {
+        return $this->hasMany(RoomRegistration::class);
+    }
 }

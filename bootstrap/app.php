@@ -6,14 +6,17 @@ use Illuminate\Foundation\Configuration\Middleware;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
-        web: __DIR__ . '/../routes/web.php',
-        commands: __DIR__ . '/../routes/console.php',
+        web: __DIR__.'/../routes/web.php',
+        commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        // Tắt bảo vệ CSRF cho các đường dẫn của Module Đăng ký
+        // Ba trang HTML tĩnh chưa có khả năng gửi CSRF token. Chỉ miễn trừ
+        // đúng ba endpoint thay đổi dữ liệu mà các trang này đang sử dụng.
         $middleware->validateCsrfTokens(except: [
-            'registration/*',
+            'registration/store',
+            'registration/cancel/*',
+            'registration/update/*',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

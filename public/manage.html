@@ -61,12 +61,20 @@
             background-color: #dc3545;
         }
 
+        .btn-waitlist {
+            background-color: #fd7e14;
+        }
+
         .btn-approve:hover {
             background-color: #218838;
         }
 
         .btn-reject:hover {
             background-color: #c82333;
+        }
+
+        .btn-waitlist:hover {
+            background-color: #e96b02;
         }
 
         .status-pending {
@@ -98,69 +106,100 @@
     </div>
 
     <script>
-        // 1. Hàm tự động gọi API lấy danh sách đơn đăng ký
-        function fetchWaitlist() {
-            fetch('/registration/waitlist')
-                .then(response => response.json())
-                .then(result => {
-                    const tbody = document.getElementById('tableBody');
-                    tbody.innerHTML = ''; // Xóa sạch dữ liệu trắng ban đầu
+        function escapeHtml(value) {
+            const element = document.createElement('div');
+            element.textContent = value ?? '';
+            return element.innerHTML;
+        }
 
-                    const data = result.data || result; // Lấy mảng dữ liệu
+        async function fetchPending() {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Đang tải...</td></tr>';
 
-                    if (!data || data.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Không có đơn đăng ký nào đang chờ.</td></tr>';
-                        return;
-                    }
+            try {
+                const response = await fetch('/registration/pending', {
+                    headers: { 'Accept': 'application/json' }
+                });
+                const result = await response.json();
 
-                    // Vòng lặp vẽ từng hàng dữ liệu ra bảng
-                    data.forEach(item => {
-                        const tr = document.createElement('tr');
-                        tr.innerHTML = `
+                if (!response.ok) {
+                    throw new Error(result.message || 'Không thể tải danh sách đơn chờ duyệt.');
+                }
+
+                tbody.innerHTML = '';
+                if (!result.data || result.data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Không có đơn đăng ký nào đang chờ.</td></tr>';
+                    return;
+                }
+
+                result.data.forEach(item => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
                         <td>${item.id}</td>
-                        <td>${item.student_code}</td>
-                        <td>${item.full_name}</td>
+                        <td>${escapeHtml(item.student.student_code)}</td>
+                        <td>${escapeHtml(item.student.full_name)}</td>
                         <td>${item.room_id}</td>
                         <td class="status-pending">${item.status}</td>
                         <td>
                             <button class="btn btn-approve" onclick="updateStatus(${item.id}, 'approved')">Duyệt</button>
+                            <button class="btn btn-waitlist" onclick="updateStatus(${item.id}, 'waitlist')">Danh sách chờ</button>
                             <button class="btn btn-reject" onclick="updateStatus(${item.id}, 'rejected')">Từ chối</button>
                         </td>
                     `;
-                        tbody.appendChild(tr);
-                    });
-                })
-                .catch(error => console.error('Lỗi tải dữ liệu:', error));
+                    tbody.appendChild(tr);
+                });
+            } catch (error) {
+                console.error('Lỗi tải dữ liệu:', error);
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:red;">${escapeHtml(error.message)}</td></tr>`;
+            }
         }
 
-        // 2. Hàm xử lý khi cán bộ bấm nút Duyệt hoặc Từ chối
-        function updateStatus(id, newStatus) {
-            // Hiện bảng hỏi xác nhận
-            const actionName = newStatus === 'approved' ? 'DUYỆT' : 'TỪ CHỐI';
+        async function updateStatus(id, newStatus) {
+            const actionNames = {
+                approved: 'DUYỆT',
+                rejected: 'TỪ CHỐI',
+                waitlist: 'ĐƯA VÀO DANH SÁCH CHỜ'
+            };
+            const rejectedReason = newStatus === 'rejected'
+                ? prompt('Nhập lý do từ chối:')
+                : null;
+
+            if (newStatus === 'rejected' && !rejectedReason?.trim()) {
+                alert('Lý do từ chối là bắt buộc.');
+                return;
+            }
+
+            const actionName = actionNames[newStatus];
             if (!confirm(`Bạn có chắc chắn muốn ${actionName} đơn số ${id} này?`)) return;
 
-            // Gửi lệnh PUT xuống Backend
-            fetch(`/registration/update/${id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({ status: newStatus })
-            })
-                .then(response => response.json())
-                .then(result => {
-                    alert('Cập nhật trạng thái thành công!');
-                    fetchWaitlist(); // Tải lại danh sách bảng ngay lập tức
-                })
-                .catch(error => {
-                    console.error('Lỗi cập nhật:', error);
-                    alert('Có lỗi xảy ra khi cập nhật!');
+            try {
+                const response = await fetch(`/registration/update/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        status: newStatus,
+                        rejected_reason: rejectedReason
+                    })
                 });
+                const result = await response.json();
+
+                if (!response.ok) {
+                    const validationMessages = Object.values(result.errors || {}).flat();
+                    throw new Error(validationMessages[0] || result.message || 'Không thể cập nhật trạng thái.');
+                }
+
+                alert(result.message);
+                fetchPending();
+            } catch (error) {
+                console.error('Lỗi cập nhật:', error);
+                alert(error.message || 'Có lỗi xảy ra khi cập nhật!');
+            }
         }
 
-        // Khởi chạy hàm lấy dữ liệu ngay khi trang vừa load xong
-        fetchWaitlist();
+        fetchPending();
     </script>
 
 </body>
