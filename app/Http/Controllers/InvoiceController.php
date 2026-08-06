@@ -6,13 +6,14 @@ use App\Models\Invoice;
 use App\Models\UtilityReading;
 use App\Models\ServiceType;
 use App\Models\InvoiceItem;
+use App\Models\Room;
 use Illuminate\Http\Request;
 
 class InvoiceController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Invoice::with('items')->orderBy('created_at', 'desc');
+        $query = Invoice::with(['items', 'room.building'])->orderBy('created_at', 'desc');
 
         // Filter by month
         $monthFilter = $request->input('month', date('Y-m'));
@@ -30,13 +31,15 @@ class InvoiceController extends Controller
             'total_revenue' => $invoices->where('status', 'paid')->sum('total_amount'),
         ];
 
-        return view('invoices.index', compact('invoices', 'stats'));
+        $rooms = Room::with('building')->orderBy('building_id')->orderBy('room_number')->get();
+
+        return view('invoices.index', compact('invoices', 'stats', 'rooms'));
     }
 
 
     public function show($id)
     {
-        $invoice = Invoice::with('items')->findOrFail($id);
+        $invoice = Invoice::with(['items', 'room.building'])->findOrFail($id);
 
         return view('invoices.show', compact('invoice'));
     }

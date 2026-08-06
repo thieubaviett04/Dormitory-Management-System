@@ -33,13 +33,63 @@
             <h2 class="text-2xl font-semibold tracking-tight">Điện & Nước</h2>
             <p class="text-sm text-muted-foreground mt-1">Quản lý chỉ số và hóa đơn dịch vụ ký túc xá.</p>
         </div>
-        
+
         <div class="flex items-center space-x-3">
             <!-- Form Lọc theo tháng -->
-            <form method="GET" action="{{ route('invoice.index') }}" class="flex items-center space-x-2">
-                <div class="relative">
-                    <i data-lucide="calendar" class="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground"></i>
-                    <input type="month" name="month" value="{{ request('month', date('Y-m')) }}" onchange="this.form.submit()" class="flex h-9 w-full rounded-md border border-input bg-transparent pl-9 pr-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer">
+            <form method="GET" action="{{ route('invoice.index') }}" class="flex items-center space-x-2" x-data="{
+                open: false,
+                value: '{{ request('month', date('Y-m')) }}',
+                year: parseInt('{{ request('month', date('Y-m')) }}'.split('-')[0]),
+                month: parseInt('{{ request('month', date('Y-m')) }}'.split('-')[1]),
+                months: ['Thg 1', 'Thg 2', 'Thg 3', 'Thg 4', 'Thg 5', 'Thg 6', 'Thg 7', 'Thg 8', 'Thg 9', 'Thg 10', 'Thg 11', 'Thg 12'],
+                get formattedValue() {
+                    return this.months[this.month - 1] + ', ' + this.year;
+                },
+                selectMonth(index) {
+                    this.month = index + 1;
+                    this.value = this.year + '-' + String(this.month).padStart(2, '0');
+                    this.open = false;
+                    $nextTick(() => { $refs.form.submit() });
+                }
+            }" x-ref="form" @click.away="open = false">
+                <div class="relative w-44">
+                    <input type="hidden" name="month" x-model="value">
+                    <button type="button" @click="open = !open" 
+                            class="flex h-9 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring transition-all hover:bg-accent/50">
+                        <span x-text="formattedValue" class="text-foreground font-medium"></span>
+                        <i data-lucide="calendar" class="h-4 w-4 opacity-50" :class="open ? 'text-primary opacity-100' : ''"></i>
+                    </button>
+
+                    <div x-show="open" 
+                         x-transition:enter="transition ease-out duration-100"
+                         x-transition:enter-start="transform opacity-0 scale-95"
+                         x-transition:enter-end="transform opacity-100 scale-100"
+                         x-transition:leave="transition ease-in duration-75"
+                         x-transition:leave-start="transform opacity-100 scale-100"
+                         x-transition:leave-end="transform opacity-0 scale-95"
+                         class="absolute z-50 mt-1 w-64 right-0 rounded-md border border-border bg-popover p-3 text-popover-foreground shadow-md outline-none" style="display: none;">
+                        
+                        <div class="flex items-center justify-between pt-1 pb-4">
+                            <button type="button" @click="year--" class="h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 inline-flex items-center justify-center rounded-md border border-border hover:bg-accent hover:text-accent-foreground transition-colors">
+                                <i data-lucide="chevron-left" class="h-4 w-4"></i>
+                            </button>
+                            <div class="text-sm font-medium" x-text="year"></div>
+                            <button type="button" @click="year++" class="h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 inline-flex items-center justify-center rounded-md border border-border hover:bg-accent hover:text-accent-foreground transition-colors">
+                                <i data-lucide="chevron-right" class="h-4 w-4"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="grid grid-cols-3 gap-2">
+                            <template x-for="(monthName, index) in months" :key="index">
+                                <button type="button" 
+                                        @click="selectMonth(index)"
+                                        class="inline-flex h-9 items-center justify-center rounded-md text-sm transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-primary focus:text-primary-foreground focus:outline-none"
+                                        :class="(month === index + 1) ? 'bg-primary text-primary-foreground shadow hover:bg-primary hover:text-primary-foreground font-medium' : 'bg-transparent text-foreground'"
+                                        x-text="monthName">
+                                </button>
+                            </template>
+                        </div>
+                    </div>
                 </div>
             </form>
 
@@ -122,7 +172,7 @@
                     @forelse($invoices as $invoice)
                     <tr class="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
                         <td class="p-4 align-middle font-medium">{{ $invoice->invoice_code }}</td>
-                        <td class="p-4 align-middle text-primary font-medium">Phòng {{ $invoice->room_id + 100 }}</td>
+                        <td class="p-4 align-middle text-primary font-medium">{{ $invoice->room ? ($invoice->room->building->code . ' - Phòng ' . $invoice->room->room_number) : 'N/A' }}</td>
                         <td class="p-4 align-middle text-muted-foreground">Tháng {{ $invoice->billing_month->format('m/Y') }}</td>
                         <td class="p-4 align-middle text-right font-medium">{{ number_format($invoice->total_amount) }} đ</td>
                         <td class="p-4 align-middle text-center">
@@ -141,11 +191,11 @@
                         </td>
                         <td class="p-4 align-middle text-muted-foreground">
                             @if($invoice->payment_method == 'bank_transfer')
-                                Chuyển khoản
+                            Chuyển khoản
                             @elseif($invoice->payment_method == 'cash')
-                                Tiền mặt
+                            Tiền mặt
                             @else
-                                —
+                            —
                             @endif
                         </td>
                         <td class="p-4 align-middle text-right">
@@ -173,27 +223,27 @@
         <div x-show="showCreatePanel" class="relative z-50" aria-labelledby="slide-over-title" role="dialog" aria-modal="true">
             <!-- Background backdrop -->
             <div x-show="showCreatePanel"
-                 x-transition:enter="ease-in-out duration-300"
-                 x-transition:enter-start="opacity-0"
-                 x-transition:enter-end="opacity-100"
-                 x-transition:leave="ease-in-out duration-300"
-                 x-transition:leave-start="opacity-100"
-                 x-transition:leave-end="opacity-0"
-                 class="fixed inset-0 bg-black/50 transition-opacity backdrop-blur-sm"
-                 @click="showCreatePanel = false"></div>
+                x-transition:enter="ease-in-out duration-300"
+                x-transition:enter-start="opacity-0"
+                x-transition:enter-end="opacity-100"
+                x-transition:leave="ease-in-out duration-300"
+                x-transition:leave-start="opacity-100"
+                x-transition:leave-end="opacity-0"
+                class="fixed inset-0 bg-black/50 transition-opacity backdrop-blur-sm"
+                @click="showCreatePanel = false"></div>
 
             <div class="fixed inset-0 overflow-hidden">
                 <div class="absolute inset-0 overflow-hidden">
                     <div class="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10">
                         <div x-show="showCreatePanel"
-                             x-transition:enter="transform transition ease-in-out duration-300 sm:duration-500"
-                             x-transition:enter-start="translate-x-full"
-                             x-transition:enter-end="translate-x-0"
-                             x-transition:leave="transform transition ease-in-out duration-300 sm:duration-500"
-                             x-transition:leave-start="translate-x-0"
-                             x-transition:leave-end="translate-x-full"
-                             class="pointer-events-auto w-screen max-w-md">
-                            
+                            x-transition:enter="transform transition ease-in-out duration-300 sm:duration-500"
+                            x-transition:enter-start="translate-x-full"
+                            x-transition:enter-end="translate-x-0"
+                            x-transition:leave="transform transition ease-in-out duration-300 sm:duration-500"
+                            x-transition:leave-start="translate-x-0"
+                            x-transition:leave-end="translate-x-full"
+                            class="pointer-events-auto w-screen max-w-md">
+
                             <!-- Panel content -->
                             <div class="flex h-full flex-col overflow-y-auto bg-background shadow-xl border-l border-border">
                                 <div class="px-6 py-6 border-b border-border bg-muted/30">
@@ -234,19 +284,98 @@
                                         <div class="space-y-4">
                                             <div class="space-y-2">
                                                 <label class="text-sm font-medium leading-none">Phòng áp dụng</label>
-                                                <select name="room_id" required class="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring">
-                                                    <option value="">-- Chọn phòng --</option>
-                                                    @for($i = 101; $i <= 103; $i++)
-                                                        <option value="{{ $i - 100 }}" {{ old('room_id') == ($i - 100) ? 'selected' : '' }}>Phòng {{ $i }}</option>
-                                                    @endfor
-                                                    @for($i = 201; $i <= 203; $i++)
-                                                        <option value="{{ $i - 100 }}" {{ old('room_id') == ($i - 100) ? 'selected' : '' }}>Phòng {{ $i }}</option>
-                                                    @endfor
-                                                </select>
+                                                <div x-data="{ open: false, selected: '{{ old('room_id') }}', selectedText: '-- Vui lòng chọn phòng --' }" x-init="
+                                                    @foreach($rooms as $room)
+                                                        if (selected == '{{ $room->id }}') selectedText = '{{ $room->building->code ?? '' }} - Phòng {{ $room->room_number }}';
+                                                    @endforeach
+                                                " class="relative w-full">
+                                                    <input type="hidden" name="room_id" x-model="selected" required>
+
+                                                    <button type="button" @click="open = !open" @click.away="open = false"
+                                                        class="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all hover:border-primary/50">
+                                                        <span x-text="selectedText" :class="selected === '' ? 'text-muted-foreground' : 'text-foreground'"></span>
+                                                        <i data-lucide="chevrons-up-down" class="h-4 w-4 opacity-50" :class="open ? 'opacity-100' : ''"></i>
+                                                    </button>
+
+                                                    <div x-show="open"
+                                                        x-transition:enter="transition ease-out duration-100"
+                                                        x-transition:enter-start="transform opacity-0 scale-95"
+                                                        x-transition:enter-end="transform opacity-100 scale-100"
+                                                        x-transition:leave="transition ease-in duration-75"
+                                                        x-transition:leave-start="transform opacity-100 scale-100"
+                                                        x-transition:leave-end="transform opacity-0 scale-95"
+                                                        class="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border border-border bg-popover text-popover-foreground shadow-md outline-none" style="display: none;">
+                                                        <div class="p-1">
+                                                            @foreach ($rooms as $room)
+                                                            <div @click="selected = '{{ $room->id }}'; selectedText = '{{ $room->building->code ?? '' }} - Phòng {{ $room->room_number }}'; open = false"
+                                                                class="relative flex w-full cursor-pointer select-none items-center rounded-sm py-2 pl-8 pr-2 text-sm outline-none hover:bg-accent hover:text-accent-foreground transition-colors"
+                                                                :class="selected == '{{ $room->id }}' ? 'bg-accent/50 text-accent-foreground font-medium' : ''">
+                                                                <span x-show="selected == '{{ $room->id }}'" class="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+                                                                    <i data-lucide="check" class="h-4 w-4 text-primary"></i>
+                                                                </span>
+                                                                {{ $room->building->code ?? '' }} - Phòng {{ $room->room_number }}
+                                                            </div>
+                                                            @endforeach
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </div>
                                             <div class="space-y-2">
                                                 <label class="text-sm font-medium leading-none">Kỳ đóng tiền</label>
-                                                <input type="month" name="billing_month" value="{{ old('billing_month', date('Y-m')) }}" required class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer">
+                                                <div x-data="{
+                                                    open: false,
+                                                    value: '{{ old('billing_month', date('Y-m')) }}',
+                                                    year: parseInt('{{ old('billing_month', date('Y-m')) }}'.split('-')[0]),
+                                                    month: parseInt('{{ old('billing_month', date('Y-m')) }}'.split('-')[1]),
+                                                    months: ['Thg 1', 'Thg 2', 'Thg 3', 'Thg 4', 'Thg 5', 'Thg 6', 'Thg 7', 'Thg 8', 'Thg 9', 'Thg 10', 'Thg 11', 'Thg 12'],
+                                                    get formattedValue() {
+                                                        return this.months[this.month - 1] + ', ' + this.year;
+                                                    },
+                                                    selectMonth(index) {
+                                                        this.month = index + 1;
+                                                        this.value = this.year + '-' + String(this.month).padStart(2, '0');
+                                                        this.open = false;
+                                                    }
+                                                }" class="relative w-full" @click.away="open = false">
+                                                    <input type="hidden" name="billing_month" x-model="value">
+                                                    
+                                                    <button type="button" @click="open = !open" 
+                                                            class="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all hover:border-primary/50">
+                                                        <span x-text="formattedValue" :class="value ? 'text-foreground font-medium' : 'text-muted-foreground'"></span>
+                                                        <i data-lucide="calendar-days" class="h-4 w-4 opacity-50" :class="open ? 'text-primary opacity-100' : ''"></i>
+                                                    </button>
+
+                                                    <div x-show="open" 
+                                                         x-transition:enter="transition ease-out duration-100"
+                                                         x-transition:enter-start="transform opacity-0 scale-95"
+                                                         x-transition:enter-end="transform opacity-100 scale-100"
+                                                         x-transition:leave="transition ease-in duration-75"
+                                                         x-transition:leave-start="transform opacity-100 scale-100"
+                                                         x-transition:leave-end="transform opacity-0 scale-95"
+                                                         class="absolute z-50 mt-1 w-full rounded-md border border-border bg-popover p-3 text-popover-foreground shadow-md outline-none" style="display: none;">
+                                                        
+                                                        <div class="flex items-center justify-between pt-1 pb-4">
+                                                            <button type="button" @click="year--" class="h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 inline-flex items-center justify-center rounded-md border border-border hover:bg-accent hover:text-accent-foreground transition-colors">
+                                                                <i data-lucide="chevron-left" class="h-4 w-4"></i>
+                                                            </button>
+                                                            <div class="text-sm font-medium" x-text="year"></div>
+                                                            <button type="button" @click="year++" class="h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 inline-flex items-center justify-center rounded-md border border-border hover:bg-accent hover:text-accent-foreground transition-colors">
+                                                                <i data-lucide="chevron-right" class="h-4 w-4"></i>
+                                                            </button>
+                                                        </div>
+                                                        
+                                                        <div class="grid grid-cols-4 gap-2">
+                                                            <template x-for="(monthName, index) in months" :key="index">
+                                                                <button type="button" 
+                                                                        @click="selectMonth(index)"
+                                                                        class="inline-flex h-9 items-center justify-center rounded-md text-sm transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-primary focus:text-primary-foreground focus:outline-none"
+                                                                        :class="(month === index + 1) ? 'bg-primary text-primary-foreground shadow hover:bg-primary hover:text-primary-foreground font-medium' : 'bg-transparent text-foreground'"
+                                                                        x-text="monthName">
+                                                                </button>
+                                                            </template>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
 
@@ -257,11 +386,11 @@
                                             <div class="grid grid-cols-2 gap-4">
                                                 <div class="space-y-2">
                                                     <label class="text-xs text-muted-foreground">Chỉ số đầu</label>
-                                                    <input type="number" name="electricity_start" value="{{ old('electricity_start') }}" required class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+                                                    <input type="number" name="electricity_start" value="{{ old('electricity_start', 0) }}" min="0" oninput="if(this.value < 0) this.value = 0;" required class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
                                                 </div>
                                                 <div class="space-y-2">
                                                     <label class="text-xs text-muted-foreground">Chỉ số cuối</label>
-                                                    <input type="number" name="electricity_end" value="{{ old('electricity_end') }}" required class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+                                                    <input type="number" name="electricity_end" value="{{ old('electricity_end', 0) }}" min="0" oninput="if(this.value < 0) this.value = 0;" required class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
                                                 </div>
                                             </div>
                                         </div>
@@ -273,11 +402,11 @@
                                             <div class="grid grid-cols-2 gap-4">
                                                 <div class="space-y-2">
                                                     <label class="text-xs text-muted-foreground">Chỉ số đầu</label>
-                                                    <input type="number" name="water_start" value="{{ old('water_start') }}" required class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+                                                    <input type="number" name="water_start" value="{{ old('water_start', 0) }}" min="0" oninput="if(this.value < 0) this.value = 0;" required class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
                                                 </div>
                                                 <div class="space-y-2">
                                                     <label class="text-xs text-muted-foreground">Chỉ số cuối</label>
-                                                    <input type="number" name="water_end" value="{{ old('water_end') }}" required class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+                                                    <input type="number" name="water_end" value="{{ old('water_end', 0) }}" min="0" oninput="if(this.value < 0) this.value = 0;" required class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
                                                 </div>
                                             </div>
                                         </div>
@@ -288,7 +417,7 @@
                                             Hủy
                                         </button>
                                         <button type="submit" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2">
-                                            <i data-lucide="save" class="mr-2 h-4 w-4"></i> Lưu hóa đơn
+                                            <i data-lucide="plus-circle" class="mr-2 h-4 w-4"></i> Tạo hóa đơn
                                         </button>
                                     </div>
                                 </form>
@@ -306,27 +435,27 @@
     <template x-teleport="body">
         <div x-show="showDetailPanel" class="relative z-50" aria-labelledby="slide-over-title" role="dialog" aria-modal="true">
             <div x-show="showDetailPanel"
-                 x-transition:enter="ease-in-out duration-300"
-                 x-transition:enter-start="opacity-0"
-                 x-transition:enter-end="opacity-100"
-                 x-transition:leave="ease-in-out duration-300"
-                 x-transition:leave-start="opacity-100"
-                 x-transition:leave-end="opacity-0"
-                 class="fixed inset-0 bg-black/50 transition-opacity backdrop-blur-sm"
-                 @click="showDetailPanel = false"></div>
+                x-transition:enter="ease-in-out duration-300"
+                x-transition:enter-start="opacity-0"
+                x-transition:enter-end="opacity-100"
+                x-transition:leave="ease-in-out duration-300"
+                x-transition:leave-start="opacity-100"
+                x-transition:leave-end="opacity-0"
+                class="fixed inset-0 bg-black/50 transition-opacity backdrop-blur-sm"
+                @click="showDetailPanel = false"></div>
 
             <div class="fixed inset-0 overflow-hidden">
                 <div class="absolute inset-0 overflow-hidden">
                     <div class="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10 sm:pl-16">
                         <div x-show="showDetailPanel"
-                             x-transition:enter="transform transition ease-in-out duration-300 sm:duration-500"
-                             x-transition:enter-start="translate-x-full"
-                             x-transition:enter-end="translate-x-0"
-                             x-transition:leave="transform transition ease-in-out duration-300 sm:duration-500"
-                             x-transition:leave-start="translate-x-0"
-                             x-transition:leave-end="translate-x-full"
-                             class="pointer-events-auto w-screen max-w-lg">
-                            
+                            x-transition:enter="transform transition ease-in-out duration-300 sm:duration-500"
+                            x-transition:enter-start="translate-x-full"
+                            x-transition:enter-end="translate-x-0"
+                            x-transition:leave="transform transition ease-in-out duration-300 sm:duration-500"
+                            x-transition:leave-start="translate-x-0"
+                            x-transition:leave-end="translate-x-full"
+                            class="pointer-events-auto w-screen max-w-lg">
+
                             <div class="flex h-full flex-col overflow-y-auto bg-background shadow-xl border-l border-border" x-show="selectedInvoice">
                                 <!-- Header -->
                                 <div class="px-6 py-6 border-b border-border bg-muted/30">
@@ -354,7 +483,7 @@
                                     <div class="grid grid-cols-2 gap-4 bg-muted/50 p-4 rounded-xl border border-border/50">
                                         <div>
                                             <p class="text-xs font-medium text-muted-foreground mb-1">Đối tượng áp dụng</p>
-                                            <p class="text-sm font-semibold" x-text="'Phòng ' + (parseInt(selectedInvoice?.room_id) + 100)"></p>
+                                            <p class="text-sm font-semibold" x-text="selectedInvoice?.room ? (selectedInvoice.room.building.code + ' - Phòng ' + selectedInvoice.room.room_number) : 'N/A'"></p>
                                         </div>
                                         <div>
                                             <p class="text-xs font-medium text-muted-foreground mb-1">Kỳ đóng tiền</p>
