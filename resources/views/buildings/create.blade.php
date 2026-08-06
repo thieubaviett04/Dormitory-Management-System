@@ -59,6 +59,15 @@
                     <input type="number" name="floors" id="floors" value="{{ old('floors') }}" required min="1" placeholder="Ví dụ: 5" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring">
                 </div>
 
+                <div class="space-y-2">
+                    <label class="text-sm font-medium leading-none" for="gender_policy">Chính sách giới tính</label>
+                    <select name="gender_policy" id="gender_policy" required class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
+                        <option value="male" {{ old('gender_policy') === 'male' ? 'selected' : '' }}>Nam</option>
+                        <option value="female" {{ old('gender_policy') === 'female' ? 'selected' : '' }}>Nữ</option>
+                        <option value="mixed" {{ old('gender_policy', 'mixed') === 'mixed' ? 'selected' : '' }}>Hỗn hợp (phòng vẫn đồng nhất giới tính)</option>
+                    </select>
+                </div>
+
                 <!-- Mô tả -->
                 <div class="space-y-2">
                     <label class="text-sm font-medium leading-none" for="description">Mô tả chi tiết</label>

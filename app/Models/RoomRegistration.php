@@ -6,6 +6,7 @@ use App\Enums\RoomRegistrationStatus;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class RoomRegistration extends Model
 {
@@ -20,6 +21,8 @@ class RoomRegistration extends Model
         'rejected_reason',
         'cancelled_at',
         'cancellation_reason',
+        'completed_at',
+        'completed_by',
     ];
 
     protected function casts(): array
@@ -29,6 +32,7 @@ class RoomRegistration extends Model
             'registered_at' => 'datetime',
             'reviewed_at' => 'datetime',
             'cancelled_at' => 'datetime',
+            'completed_at' => 'datetime',
         ];
     }
 
@@ -50,5 +54,15 @@ class RoomRegistration extends Model
     public function reviewer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reviewed_by');
+    }
+
+    public function completer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'completed_by');
+    }
+
+    public function contract(): HasOne
+    {
+        return $this->hasOne(Contract::class);
     }
 }

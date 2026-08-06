@@ -37,6 +37,7 @@
                         <th class="h-10 px-4 text-left align-middle font-medium text-muted-foreground w-[120px]">Mã tòa nhà</th>
                         <th class="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Tên tòa nhà</th>
                         <th class="h-10 px-4 text-center align-middle font-medium text-muted-foreground w-[120px]">Số tầng</th>
+                        <th class="h-10 px-4 text-left align-middle font-medium text-muted-foreground w-[140px]">Giới tính</th>
                         <th class="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Mô tả</th>
                         <th class="h-10 px-4 text-right align-middle font-medium text-muted-foreground w-[150px]">Thao tác</th>
                     </tr>
@@ -48,6 +49,9 @@
                         <td class="p-4 align-middle font-semibold text-primary">{{ $building->code }}</td>
                         <td class="p-4 align-middle font-medium">{{ $building->name }}</td>
                         <td class="p-4 align-middle text-center font-medium">{{ $building->floors }}</td>
+                        <td class="p-4 align-middle">
+                            {{ ['male' => 'Nam', 'female' => 'Nữ', 'mixed' => 'Hỗn hợp'][$building->gender_policy] ?? $building->gender_policy }}
+                        </td>
                         <td class="p-4 align-middle text-muted-foreground max-w-xs truncate" title="{{ $building->description }}">{{ $building->description ?: '—' }}</td>
                         <td class="p-4 align-middle text-right">
                             <div class="flex items-center justify-end space-x-2">
@@ -66,7 +70,7 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="6" class="p-8 text-center text-muted-foreground">
+                        <td colspan="7" class="p-8 text-center text-muted-foreground">
                             Chưa có tòa nhà nào trong hệ thống.
                         </td>
                     </tr>

@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Bed;
 use App\Models\Room;
+use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
+
 // use App\Models\Building;
 
 class BedController extends Controller
@@ -41,7 +43,7 @@ class BedController extends Controller
         $request->validate([
             'room_id' => 'required|exists:rooms,id',
             'bed_number' => 'required|max:20',
-            'status' => 'required|in:available,occupied,maintenance',
+            'status' => 'required|in:available,maintenance',
         ]);
 
         Bed::create([
@@ -73,8 +75,9 @@ class BedController extends Controller
         $rooms = Room::with('building')
             ->orderBy('room_number')
             ->get();
+        $hasActiveAllocation = $bed->allocations()->active()->exists();
 
-        return view('beds.edit', compact('bed', 'rooms'));
+        return view('beds.edit', compact('bed', 'rooms', 'hasActiveAllocation'));
     }
 
     /**
@@ -89,6 +92,25 @@ class BedController extends Controller
             'bed_number' => 'required|max:20',
             'status' => 'required|in:available,occupied,maintenance',
         ]);
+
+        $hasActiveAllocation = $bed->allocations()->active()->exists();
+        if ($bed->allocations()->exists() && (int) $request->room_id !== $bed->room_id) {
+            throw ValidationException::withMessages([
+                'room_id' => 'Không thể chuyển giường sang phòng khác vì đã có lịch sử phân giường.',
+            ]);
+        }
+
+        if ($hasActiveAllocation && $request->status !== 'occupied') {
+            throw ValidationException::withMessages([
+                'status' => 'Giường đang được phân; hãy trả phòng hoặc chuyển phòng trước.',
+            ]);
+        }
+
+        if (! $hasActiveAllocation && $request->status === 'occupied') {
+            throw ValidationException::withMessages([
+                'status' => 'Chỉ Module 3 được đánh dấu giường đang có người ở.',
+            ]);
+        }
 
         $bed->update([
             'room_id' => $request->room_id,
@@ -107,6 +129,12 @@ class BedController extends Controller
     public function destroy(string $id)
     {
         $bed = Bed::findOrFail($id);
+
+        if ($bed->allocations()->exists()) {
+            throw ValidationException::withMessages([
+                'bed' => 'Không thể xóa giường đã có lịch sử phân giường.',
+            ]);
+        }
 
         $bed->delete();
 
