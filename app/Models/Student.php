@@ -28,4 +28,9 @@ class Student extends Model
     {
         return $this->hasMany(RoomRegistration::class);
     }
+
+    public function contracts(): HasMany
+    {
+        return $this->hasMany(Contract::class);
+    }
 }

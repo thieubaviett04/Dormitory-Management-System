@@ -9,6 +9,7 @@ enum RoomRegistrationStatus: string
     case Rejected = 'rejected';
     case Waitlist = 'waitlist';
     case Cancelled = 'cancelled';
+    case Completed = 'completed';
 
     /**
      * @return list<string>
@@ -48,7 +49,7 @@ enum RoomRegistrationStatus: string
                 self::Rejected,
                 self::Cancelled,
             ], true),
-            self::Approved, self::Rejected, self::Cancelled => false,
+            self::Approved, self::Rejected, self::Cancelled, self::Completed => false,
         };
     }
 }

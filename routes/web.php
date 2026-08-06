@@ -1,10 +1,13 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\RoomRegistrationController;
-use App\Http\Controllers\BuildingController;
-use App\Http\Controllers\RoomController;
 use App\Http\Controllers\BedController;
+use App\Http\Controllers\BuildingController;
+use App\Http\Controllers\ContractController;
+use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\RoomController;
+use App\Http\Controllers\RoomRegistrationController;
+use App\Http\Controllers\ViolationRecordController;
+use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return view('welcome');
@@ -37,14 +40,29 @@ Route::resource('buildings', BuildingController::class);
 Route::resource('rooms', RoomController::class);
 Route::resource('beds', BedController::class);
 
-Route::get('/invoices', [App\Http\Controllers\InvoiceController::class, 'index'])->name('invoice.index');
+// ==========================================
+// MODULE 3: PHÂN GIƯỜNG & HỢP ĐỒNG
+// ==========================================
+Route::prefix('contracts')->name('contracts.')->group(function () {
+    Route::get('/', [ContractController::class, 'index'])->name('index');
+    Route::get('/create', [ContractController::class, 'create'])->name('create');
+    Route::get('/eligible-registrations', [ContractController::class, 'eligibleRegistrations'])
+        ->name('eligible-registrations');
+    Route::post('/', [ContractController::class, 'store'])->name('store');
+    Route::get('/{contract}', [ContractController::class, 'show'])->name('show');
+    Route::post('/{contract}/transfers', [ContractController::class, 'transfer'])->name('transfer');
+    Route::post('/{contract}/renewals', [ContractController::class, 'renew'])->name('renew');
+    Route::patch('/{contract}/terminate', [ContractController::class, 'terminate'])->name('terminate');
+});
 
-Route::get('/invoices/create', [App\Http\Controllers\InvoiceController::class, 'create'])->name('invoice.create');
+Route::get('/invoices', [InvoiceController::class, 'index'])->name('invoice.index');
 
-Route::post('/invoices', [App\Http\Controllers\InvoiceController::class, 'store'])->name('invoice.store');
+Route::get('/invoices/create', [InvoiceController::class, 'create'])->name('invoice.create');
 
-Route::patch('/invoices/{id}/pay', [App\Http\Controllers\InvoiceController::class, 'pay'])->name('invoice.pay');
+Route::post('/invoices', [InvoiceController::class, 'store'])->name('invoice.store');
 
-Route::get('/invoices/{id}', [App\Http\Controllers\InvoiceController::class, 'show'])->name('invoice.show');
+Route::patch('/invoices/{id}/pay', [InvoiceController::class, 'pay'])->name('invoice.pay');
 
-Route::get('/violations', [App\Http\Controllers\ViolationRecordController::class, 'index'])->name('violation.index');
+Route::get('/invoices/{id}', [InvoiceController::class, 'show'])->name('invoice.show');
+
+Route::get('/violations', [ViolationRecordController::class, 'index'])->name('violation.index');

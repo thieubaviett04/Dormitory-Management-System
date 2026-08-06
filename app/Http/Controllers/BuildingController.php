@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Models\Allocation;
 use App\Models\Building;
+use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class BuildingController extends Controller
 {
@@ -16,6 +18,7 @@ class BuildingController extends Controller
 
         return view('buildings.index', compact('buildings'));
     }
+
     /**
      * Show the form for creating a new resource.
      */
@@ -33,6 +36,7 @@ class BuildingController extends Controller
             'code' => 'required|max:20|unique:buildings,code',
             'name' => 'required|max:255',
             'floors' => 'required|integer|min:1',
+            'gender_policy' => 'required|in:male,female,mixed',
             'description' => 'nullable|max:500',
         ]);
 
@@ -40,6 +44,7 @@ class BuildingController extends Controller
             'code',
             'name',
             'floors',
+            'gender_policy',
             'description',
         ]));
 
@@ -74,16 +79,32 @@ class BuildingController extends Controller
         $building = Building::findOrFail($id);
 
         $request->validate([
-            'code' => 'required|max:20|unique:buildings,code,' . $building->id,
+            'code' => 'required|max:20|unique:buildings,code,'.$building->id,
             'name' => 'required|max:255',
             'floors' => 'required|integer|min:1',
+            'gender_policy' => 'required|in:male,female,mixed',
             'description' => 'nullable|max:500',
         ]);
+
+        $genderPolicy = $request->string('gender_policy')->toString();
+        if (
+            $genderPolicy !== 'mixed'
+            && Allocation::query()
+                ->active()
+                ->whereHas('bed.room', fn ($query) => $query->where('building_id', $building->id))
+                ->whereHas('contract.student', fn ($query) => $query->where('gender', '!=', $genderPolicy))
+                ->exists()
+        ) {
+            throw ValidationException::withMessages([
+                'gender_policy' => 'Không thể đổi chính sách vì tòa nhà đang có sinh viên không phù hợp.',
+            ]);
+        }
 
         $building->update($request->only([
             'code',
             'name',
             'floors',
+            'gender_policy',
             'description',
         ]));
 
@@ -98,6 +119,16 @@ class BuildingController extends Controller
     public function destroy(string $id)
     {
         $building = Building::findOrFail($id);
+
+        if (
+            Allocation::query()
+                ->whereHas('bed.room', fn ($query) => $query->where('building_id', $building->id))
+                ->exists()
+        ) {
+            throw ValidationException::withMessages([
+                'building' => 'Không thể xóa tòa nhà đã có lịch sử phân giường.',
+            ]);
+        }
 
         $building->delete();
 

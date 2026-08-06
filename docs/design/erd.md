@@ -1,27 +1,29 @@
 # Sơ đồ quan hệ thực thể (ERD)
 
-Sơ đồ ERD (Entity Relationship Diagram) thể hiện mối quan hệ giữa các thực thể chính trong Hệ thống Quản lý Ký túc xá.
+Sơ đồ dưới đây phản ánh schema vật lý hiện tại của Module 1–3. Các bảng dịch vụ, hóa đơn và vi phạm được lược bớt để tập trung vào luồng đăng ký, phân giường và hợp đồng.
 
 ```mermaid
 erDiagram
-    USERS ||--o| STUDENTS : "is a (optional)"
-    BLOCKS ||--o{ ROOMS : "contains"
-    ROOM_TYPES ||--o{ ROOMS : "defines"
-    ROOMS ||--o{ ACCOMMODATION_REGISTRATIONS : "requests"
-    STUDENTS ||--o{ ACCOMMODATION_REGISTRATIONS : "submits"
-    ROOMS ||--o{ CONTRACTS : "assigned to"
-    STUDENTS ||--o{ CONTRACTS : "signs"
-    ROOMS ||--o{ UTILITY_INVOICES : "billed to"
-    CONTRACTS ||--o{ ROOM_ALLOCATIONS : "allocates"
+    USERS ||--o{ ROOM_REGISTRATIONS : reviews
+    USERS ||--o{ CONTRACTS : creates
+    BUILDINGS ||--o{ ROOMS : contains
+    ROOMS ||--o{ BEDS : contains
+    STUDENTS ||--o{ ROOM_REGISTRATIONS : submits
+    ROOMS ||--o{ ROOM_REGISTRATIONS : requested
+    ROOM_REGISTRATIONS ||--o| CONTRACTS : creates
+    STUDENTS ||--o{ CONTRACTS : owns
+    CONTRACTS ||--o{ ALLOCATIONS : contains
+    BEDS ||--o{ ALLOCATIONS : assigned
+    CONTRACTS ||--o{ CONTRACT_RENEWALS : renewed
 ```
 
-## Giải thích các thực thể
-1. **USERS**: Chứa thông tin tài khoản đăng nhập của Sinh viên, Cán bộ quản lý và Quản trị viên.
-2. **STUDENTS**: Chứa thông tin chi tiết của sinh viên (mã sinh viên, lớp, khoa, ngày sinh...).
-3. **BLOCKS**: Danh sách dãy nhà / tòa nhà trong ký túc xá.
-4. **ROOM_TYPES**: Định nghĩa các loại phòng (đơn giá phòng, số lượng giường).
-5. **ROOMS**: Danh sách các phòng cụ thể thuộc dãy nhà nào, loại phòng nào.
-6. **ACCOMMODATION_REGISTRATIONS**: Đơn đăng ký chỗ ở của sinh viên.
-7. **CONTRACTS**: Hợp đồng thuê phòng của sinh viên.
-8. **UTILITY_INVOICES**: Hóa đơn điện nước hàng tháng của từng phòng.
-9. **ROOM_ALLOCATIONS**: Bản ghi chi tiết phân sinh viên vào giường/phòng cụ thể nào trong thời hạn hợp đồng.
+## Giải thích
+
+1. **BUILDINGS / ROOMS / BEDS**: Cấu trúc cơ sở vật chất thực tế.
+2. **STUDENTS**: Hồ sơ sinh viên dùng chung cho đăng ký và hợp đồng.
+3. **ROOM_REGISTRATIONS**: Phòng nguyện vọng; đơn `approved` là đầu vào Module 3.
+4. **CONTRACTS**: Hợp đồng lưu trú; một đơn chỉ tạo tối đa một hợp đồng.
+5. **ALLOCATIONS**: Lịch sử phân giường. Allocation có `released_at = null` là vị trí hiện tại.
+6. **CONTRACT_RENEWALS**: Lưu lịch sử thay đổi ngày hết hạn, không ghi đè mất dữ liệu cũ.
+
+`contracts` không lưu `room_id`. Phòng hiện tại được xác định qua `contracts -> allocations -> beds -> rooms`, vì một hợp đồng có thể chuyển phòng nhiều lần.

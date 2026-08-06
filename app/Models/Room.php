@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 class Room extends Model
 {
@@ -29,5 +30,10 @@ class Room extends Model
     public function roomRegistrations(): HasMany
     {
         return $this->hasMany(RoomRegistration::class);
+    }
+
+    public function allocations(): HasManyThrough
+    {
+        return $this->hasManyThrough(Allocation::class, Bed::class);
     }
 }

@@ -15,6 +15,7 @@ Các trạng thái:
 - `approved`: đã duyệt và đủ điều kiện chuyển sang Module 3.
 - `rejected`: đã từ chối; bắt buộc lưu lý do.
 - `cancelled`: sinh viên đã hủy; bản ghi vẫn được giữ lại.
+- `completed`: Module 3 đã kết thúc hợp đồng lưu trú gắn với đơn; sinh viên có thể tạo đơn mới.
 
 Các chuyển trạng thái hợp lệ:
 
@@ -29,11 +30,13 @@ stateDiagram-v2
     waitlist --> rejected
     waitlist --> cancelled
     approved --> [*]
+    approved --> completed: Module 3 kết thúc hợp đồng
+    completed --> [*]
     rejected --> [*]
     cancelled --> [*]
 ```
 
-`approved`, `rejected` và `cancelled` là trạng thái kết thúc. Khi duyệt hoặc từ chối, hệ thống ghi `reviewed_at` và `reviewed_by` nếu có người dùng đăng nhập. Khi hủy, hệ thống ghi `cancelled_at` và `cancellation_reason` tùy chọn; không xóa đơn khỏi cơ sở dữ liệu.
+`approved`, `rejected` và `cancelled` là trạng thái kết thúc trong phạm vi Module 2. Module 3 có thể chuyển `approved` sang `completed` khi hợp đồng hết hạn hoặc bị thanh lý. Khi duyệt hoặc từ chối, hệ thống ghi `reviewed_at` và `reviewed_by` nếu có người dùng đăng nhập. Khi hủy, hệ thống ghi `cancelled_at` và `cancellation_reason` tùy chọn; không xóa đơn khỏi cơ sở dữ liệu.
 
 ## 3. Quy tắc kiểm tra dữ liệu
 
@@ -66,6 +69,7 @@ Module 3 có thể sử dụng một đơn khi:
 - Sinh viên, phòng nguyện vọng và quan hệ foreign key đều hợp lệ.
 - Giường được phân thuộc đúng phòng nguyện vọng trên đơn.
 - Module 3 vẫn phải tự kiểm tra sức chứa, trạng thái giường, giới tính và hợp đồng đang hiệu lực; Module 2 không đảm nhiệm các ràng buộc này.
+- Khi hợp đồng kết thúc, Module 3 chuyển đơn sang `completed`, ghi `completed_at` và `completed_by` để sinh viên có thể đăng ký đợt lưu trú tiếp theo.
 
 ## 6. Giới hạn bảo mật hiện tại
 

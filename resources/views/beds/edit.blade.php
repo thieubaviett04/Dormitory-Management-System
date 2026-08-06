@@ -64,9 +64,12 @@
                 <div class="space-y-2">
                     <label class="text-sm font-medium leading-none" for="status">Trạng thái giường</label>
                     <select name="status" id="status" required class="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-                        <option value="available" {{ old('status', $bed->status) == 'available' ? 'selected' : '' }}>Trống (Available)</option>
-                        <option value="occupied" {{ old('status', $bed->status) == 'occupied' ? 'selected' : '' }}>Đang ở (Occupied)</option>
-                        <option value="maintenance" {{ old('status', $bed->status) == 'maintenance' ? 'selected' : '' }}>Bảo trì (Maintenance)</option>
+                        @if($hasActiveAllocation)
+                            <option value="occupied" selected>Đang ở (quản lý bởi Module 3)</option>
+                        @else
+                            <option value="available" {{ old('status', $bed->status) == 'available' ? 'selected' : '' }}>Trống (Available)</option>
+                            <option value="maintenance" {{ old('status', $bed->status) == 'maintenance' ? 'selected' : '' }}>Bảo trì (Maintenance)</option>
+                        @endif
                     </select>
                 </div>
             </div>
