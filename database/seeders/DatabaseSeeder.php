@@ -23,6 +23,9 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $this->call([
+            BuildingSeeder::class,
+            RoomSeeder::class,
+            BedSeeder::class,
             ServiceTypeSeeder::class,
             ViolationTypeSeeder::class,
             ViolationRecordSeeder::class,
