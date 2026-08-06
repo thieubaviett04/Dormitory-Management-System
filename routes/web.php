@@ -13,22 +13,23 @@ Route::get('/', function () {
 // ==========================================
 // MODULE 2: ĐĂNG KÝ CHỖ Ở (ROUTES)
 // ==========================================
-Route::prefix('registration')->group(function () {
+Route::prefix('registration')->name('registration.')->group(function () {
 
     // 1. Sinh viên đăng ký phòng (Phương thức POST)
-    Route::post('/store', [RoomRegistrationController::class, 'store']);
+    Route::post('/store', [RoomRegistrationController::class, 'store'])->name('store');
 
     // 2. Hủy đăng ký (Phương thức DELETE)
-    Route::delete('/cancel/{id}', [RoomRegistrationController::class, 'cancel']);
+    Route::delete('/cancel/{roomRegistration}', [RoomRegistrationController::class, 'cancel'])->name('cancel');
 
     // 3. Xem trạng thái đơn của sinh viên (Phương thức GET)
-    Route::get('/status/{student_id}', [RoomRegistrationController::class, 'showStatus']);
+    Route::get('/status/{student}', [RoomRegistrationController::class, 'showStatus'])->name('status');
 
     // 4. Cán bộ duyệt / từ chối đơn (Phương thức PUT)
-    Route::put('/update/{id}', [RoomRegistrationController::class, 'updateStatus']);
+    Route::put('/update/{roomRegistration}', [RoomRegistrationController::class, 'updateStatus'])->name('update');
 
-    // 5. Xem danh sách chờ (Phương thức GET)
-    Route::get('/waitlist', [RoomRegistrationController::class, 'waitlist']);
+    // 5. Xem danh sách đơn chờ duyệt và danh sách chờ xếp phòng
+    Route::get('/pending', [RoomRegistrationController::class, 'pending'])->name('pending');
+    Route::get('/waitlist', [RoomRegistrationController::class, 'waitlist'])->name('waitlist');
 
 });
 
