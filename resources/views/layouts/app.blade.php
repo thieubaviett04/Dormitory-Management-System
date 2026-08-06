@@ -1,18 +1,19 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'Quản lý KTX')</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
+
     <!-- Alpine.js -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
+
     <!-- Shadcn CSS Variables & Tailwind Config -->
     <style>
         :root {
@@ -91,6 +92,7 @@
         }
     </script>
 </head>
+
 <body class="bg-background text-foreground flex min-h-screen antialiased">
 
     <!-- Sidebar cố định -->
@@ -112,15 +114,30 @@
                 <i data-lucide="layout-dashboard" class="h-4 w-4"></i>
                 <span>Tổng quan</span>
             </a>
-            
+
             <a href="{{ route('invoice.index') }}" class="flex items-center space-x-3 px-3 py-2 rounded-md {{ Route::is('invoice.*') ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground' }} text-sm font-medium transition-colors">
                 <i data-lucide="receipt" class="h-4 w-4"></i>
                 <span>Điện & Nước</span>
             </a>
-            
+
             <a href="{{ route('violation.index') }}" class="flex items-center space-x-3 px-3 py-2 rounded-md {{ Route::is('violation.*') ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground' }} text-sm font-medium transition-colors">
                 <i data-lucide="alert-triangle" class="h-4 w-4"></i>
                 <span>Vi phạm & Phạt</span>
+            </a>
+
+            <a href="{{ route('buildings.index') }}" class="flex items-center space-x-3 px-3 py-2 rounded-md {{ Route::is('buildings.*') ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground' }} text-sm font-medium transition-colors">
+                <i data-lucide="building" class="h-4 w-4"></i>
+                <span>Tòa nhà</span>
+            </a>
+
+            <a href="{{ route('rooms.index') }}" class="flex items-center space-x-3 px-3 py-2 rounded-md {{ Route::is('rooms.*') ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground' }} text-sm font-medium transition-colors">
+                <i data-lucide="door-open" class="h-4 w-4"></i>
+                <span>Phòng</span>
+            </a>
+
+            <a href="{{ route('beds.index') }}" class="flex items-center space-x-3 px-3 py-2 rounded-md {{ Route::is('beds.*') ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground' }} text-sm font-medium transition-colors">
+                <i data-lucide="bed" class="h-4 w-4"></i>
+                <span>Giường</span>
             </a>
         </nav>
 
@@ -193,4 +210,5 @@
         lucide.createIcons();
     </script>
 </body>
+
 </html>

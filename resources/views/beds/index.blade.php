@@ -1,57 +1,93 @@
-<!DOCTYPE html>
-<html>
+@extends('layouts.app')
 
-<head>
-    <meta charset="UTF-8">
-    <title>Danh sách giường</title>
-</head>
+@section('title', 'Danh sách Giường')
 
-<body>
+@section('content')
+<div class="space-y-6">
+    <!-- Header Title -->
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-end space-y-4 sm:space-y-0">
+        <div>
+            <h2 class="text-2xl font-semibold tracking-tight text-foreground">Quản lý Giường</h2>
+            <p class="text-sm text-muted-foreground mt-1">Danh sách giường trong các phòng ở ký túc xá.</p>
+        </div>
+        
+        <div class="flex items-center space-x-3">
+            <a href="{{ route('beds.create') }}" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2">
+                <i data-lucide="plus" class="mr-2 h-4 w-4"></i> Thêm giường mới
+            </a>
+        </div>
+    </div>
 
-    <h1>Danh sách giường</h1>
+    <!-- Alert -->
+    @if(session('success'))
+    <div class="relative w-full rounded-lg border border-emerald-500/50 bg-emerald-50/50 p-4 text-emerald-600 dark:border-emerald-500 [&>svg]:text-emerald-600">
+        <i data-lucide="check-circle" class="absolute left-4 top-4 h-4 w-4"></i>
+        <h5 class="mb-1 leading-none font-medium pl-7">Thành công</h5>
+        <div class="text-sm [&_p]:leading-relaxed pl-7">{{ session('success') }}</div>
+    </div>
+    @endif
 
-    <a href="{{ route('beds.create') }}">Thêm giường</a>
-
-    <br><br>
-
-    <table border="1" cellpadding="8">
-        <tr>
-            <th>ID</th>
-            <th>Tòa nhà</th>
-            <th>Phòng</th>
-            <th>Giường</th>
-            <th>Trạng thái</th>
-            <th>Hành động</th>
-        </tr>
-
-        @foreach($beds as $bed)
-        <tr>
-            <td>{{ $bed->id }}</td>
-            <td>{{ $bed->room->building->name }}</td>
-            <td>{{ $bed->room->room_number }}</td>
-            <td>{{ $bed->bed_number }}</td>
-            <td>{{ $bed->status }}</td>
-
-            <td>
-                <a href="{{ route('beds.edit', $bed->id) }}">Sửa</a>
-
-                <form action="{{ route('beds.destroy', $bed->id) }}"
-                    method="POST"
-                    style="display:inline;">
-                    @csrf
-                    @method('DELETE')
-
-                    <button type="submit"
-                        onclick="return confirm('Bạn có chắc muốn xóa giường này?')">
-                        Xóa
-                    </button>
-                </form>
-            </td>
-        </tr>
-        @endforeach
-
-    </table>
-
-</body>
-
-</html>
+    <!-- Data Table Container -->
+    <div class="rounded-md border bg-card shadow-sm overflow-hidden">
+        <div class="relative w-full overflow-auto">
+            <table class="w-full caption-bottom text-sm">
+                <thead class="[&_tr]:border-b">
+                    <tr class="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                        <th class="h-10 px-4 text-left align-middle font-medium text-muted-foreground w-[80px]">ID</th>
+                        <th class="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Tòa nhà</th>
+                        <th class="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Phòng</th>
+                        <th class="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Số giường / Tên</th>
+                        <th class="h-10 px-4 text-center align-middle font-medium text-muted-foreground">Trạng thái</th>
+                        <th class="h-10 px-4 text-right align-middle font-medium text-muted-foreground w-[150px]">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody class="[&_tr:last-child]:border-0">
+                    @forelse($beds as $bed)
+                    <tr class="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                        <td class="p-4 align-middle font-medium text-muted-foreground">#{{ $bed->id }}</td>
+                        <td class="p-4 align-middle font-medium">{{ $bed->room->building->name ?? 'N/A' }}</td>
+                        <td class="p-4 align-middle font-bold text-primary">Phòng {{ $bed->room->room_number ?? 'N/A' }}</td>
+                        <td class="p-4 align-middle font-medium">{{ $bed->bed_number }}</td>
+                        <td class="p-4 align-middle text-center">
+                            @if($bed->status == 'available')
+                            <span class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold border-transparent bg-emerald-100 text-emerald-800">
+                                Trống (Available)
+                            </span>
+                            @elseif($bed->status == 'occupied')
+                            <span class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold border-transparent bg-blue-100 text-blue-800">
+                                Đang ở (Occupied)
+                            </span>
+                            @else
+                            <span class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold border-transparent bg-destructive/10 text-destructive">
+                                Bảo trì (Maintenance)
+                            </span>
+                            @endif
+                        </td>
+                        <td class="p-4 align-middle text-right">
+                            <div class="flex items-center justify-end space-x-2">
+                                <a href="{{ route('beds.edit', $bed->id) }}" class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 px-3">
+                                    <i data-lucide="edit-3" class="mr-1.5 h-3.5 w-3.5"></i> Sửa
+                                </a>
+                                <form action="{{ route('beds.destroy', $bed->id) }}" method="POST" class="inline">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" onclick="return confirm('Bạn có chắc chắn muốn xóa giường này?')" class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-destructive text-destructive-foreground shadow hover:bg-destructive/90 h-8 px-3">
+                                        <i data-lucide="trash-2" class="mr-1.5 h-3.5 w-3.5"></i> Xóa
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    @empty
+                    <tr>
+                        <td colspan="6" class="p-8 text-center text-muted-foreground">
+                            Chưa có giường nào trong hệ thống.
+                        </td>
+                    </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+@endsection
