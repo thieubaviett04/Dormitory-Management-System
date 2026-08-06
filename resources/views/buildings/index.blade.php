@@ -3,18 +3,46 @@
 @section('title', 'Danh sách Tòa nhà')
 
 @section('content')
-<div class="space-y-6">
+<div class="space-y-6" x-data="{
+    showCreatePanel: {{ $errors->any() && !old('_method') ? 'true' : 'false' }},
+    showEditPanel: {{ $errors->any() && old('_method') === 'PUT' ? 'true' : 'false' }},
+    showDeleteModal: false,
+    deleteActionUrl: '',
+    deleteConfirmMessage: '',
+    selectedBuilding: {
+        id: '{{ old('building_id') }}',
+        code: '{{ old('code') }}',
+        name: '{{ old('name') }}',
+        floors: '{{ old('floors') }}',
+        description: '{{ old('description') }}'
+    },
+    openEdit(building) {
+        this.selectedBuilding = {
+            id: building.id,
+            code: building.code,
+            name: building.name,
+            floors: building.floors,
+            description: building.description
+        };
+        this.showEditPanel = true;
+    },
+    confirmDelete(actionUrl, message) {
+        this.deleteActionUrl = actionUrl;
+        this.deleteConfirmMessage = message;
+        this.showDeleteModal = true;
+    }
+}">
     <!-- Header Title -->
     <div class="flex flex-col sm:flex-row sm:justify-between sm:items-end space-y-4 sm:space-y-0">
         <div>
             <h2 class="text-2xl font-semibold tracking-tight text-foreground">Quản lý Tòa nhà</h2>
             <p class="text-sm text-muted-foreground mt-1">Xem và quản lý thông tin các tòa nhà ký túc xá.</p>
         </div>
-        
+
         <div class="flex items-center space-x-3">
-            <a href="{{ route('buildings.create') }}" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2">
+            <button @click="showCreatePanel = true" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2">
                 <i data-lucide="plus" class="mr-2 h-4 w-4"></i> Thêm tòa nhà mới
-            </a>
+            </button>
         </div>
     </div>
 
@@ -37,7 +65,6 @@
                         <th class="h-10 px-4 text-left align-middle font-medium text-muted-foreground w-[120px]">Mã tòa nhà</th>
                         <th class="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Tên tòa nhà</th>
                         <th class="h-10 px-4 text-center align-middle font-medium text-muted-foreground w-[120px]">Số tầng</th>
-                        <th class="h-10 px-4 text-left align-middle font-medium text-muted-foreground w-[140px]">Giới tính</th>
                         <th class="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Mô tả</th>
                         <th class="h-10 px-4 text-right align-middle font-medium text-muted-foreground w-[150px]">Thao tác</th>
                     </tr>
@@ -49,28 +76,21 @@
                         <td class="p-4 align-middle font-semibold text-primary">{{ $building->code }}</td>
                         <td class="p-4 align-middle font-medium">{{ $building->name }}</td>
                         <td class="p-4 align-middle text-center font-medium">{{ $building->floors }}</td>
-                        <td class="p-4 align-middle">
-                            {{ ['male' => 'Nam', 'female' => 'Nữ', 'mixed' => 'Hỗn hợp'][$building->gender_policy] ?? $building->gender_policy }}
-                        </td>
                         <td class="p-4 align-middle text-muted-foreground max-w-xs truncate" title="{{ $building->description }}">{{ $building->description ?: '—' }}</td>
                         <td class="p-4 align-middle text-right">
                             <div class="flex items-center justify-end space-x-2">
-                                <a href="{{ route('buildings.edit', $building->id) }}" class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 px-3">
+                                <button @click="openEdit({{ json_encode($building) }})" class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 px-3">
                                     <i data-lucide="edit-3" class="mr-1.5 h-3.5 w-3.5"></i> Sửa
-                                </a>
-                                <form action="{{ route('buildings.destroy', $building->id) }}" method="POST" class="inline">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" onclick="return confirm('Bạn có chắc chắn muốn xóa tòa nhà này và toàn bộ phòng thuộc về nó?')" class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-destructive text-destructive-foreground shadow hover:bg-destructive/90 h-8 px-3">
-                                        <i data-lucide="trash-2" class="mr-1.5 h-3.5 w-3.5"></i> Xóa
-                                    </button>
-                                </form>
+                                </button>
+                                <button type="button" @click="confirmDelete('{{ route('buildings.destroy', $building->id) }}', 'Bạn có chắc chắn muốn xóa tòa nhà {{ $building->name }} và toàn bộ phòng thuộc về nó?')" class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-destructive text-destructive-foreground shadow hover:bg-destructive/90 h-8 px-3">
+                                    <i data-lucide="trash-2" class="mr-1.5 h-3.5 w-3.5"></i> Xóa
+                                </button>
                             </div>
                         </td>
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="7" class="p-8 text-center text-muted-foreground">
+                        <td colspan="6" class="p-8 text-center text-muted-foreground">
                             Chưa có tòa nhà nào trong hệ thống.
                         </td>
                     </tr>
@@ -78,6 +98,291 @@
                 </tbody>
             </table>
         </div>
+
+        <!-- ========================================== -->
+        <!-- SLIDE-OVER CREATE BUILDING                 -->
+        <!-- ========================================== -->
+        <template x-teleport="body">
+            <div x-show="showCreatePanel" class="relative z-50" aria-labelledby="slide-over-title" role="dialog" aria-modal="true">
+                <!-- Background backdrop -->
+                <div x-show="showCreatePanel"
+                    x-transition:enter="ease-in-out duration-300"
+                    x-transition:enter-start="opacity-0"
+                    x-transition:enter-end="opacity-100"
+                    x-transition:leave="ease-in-out duration-300"
+                    x-transition:leave-start="opacity-100"
+                    x-transition:leave-end="opacity-0"
+                    class="fixed inset-0 bg-black/50 transition-opacity backdrop-blur-sm"
+                    @click="showCreatePanel = false"></div>
+
+                <div class="fixed inset-0 overflow-hidden">
+                    <div class="absolute inset-0 overflow-hidden">
+                        <div class="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10">
+                            <div x-show="showCreatePanel"
+                                x-transition:enter="transform transition ease-in-out duration-300 sm:duration-500"
+                                x-transition:enter-start="translate-x-full"
+                                x-transition:enter-end="translate-x-0"
+                                x-transition:leave="transform transition ease-in-out duration-300 sm:duration-500"
+                                x-transition:leave-start="translate-x-0"
+                                x-transition:leave-end="translate-x-full"
+                                class="pointer-events-auto w-screen max-w-md">
+
+                                <!-- Panel content -->
+                                <div class="flex h-full flex-col overflow-y-auto bg-background shadow-xl border-l border-border">
+                                    <div class="px-6 py-6 border-b border-border bg-muted/30">
+                                        <div class="flex items-start justify-between">
+                                            <div>
+                                                <h2 class="text-lg font-semibold leading-none tracking-tight">Thêm tòa nhà mới</h2>
+                                                <p class="text-sm text-muted-foreground mt-2">Điền thông tin bên dưới để tạo tòa nhà mới trong hệ thống.</p>
+                                            </div>
+                                            <div class="ml-3 flex h-7 items-center">
+                                                <button @click="showCreatePanel = false" type="button" class="relative rounded-md bg-background text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring">
+                                                    <i data-lucide="x" class="h-4 w-4"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <form action="{{ route('buildings.store') }}" method="POST" class="flex-1 flex flex-col">
+                                        @csrf
+                                        <div class="flex-1 px-6 py-6 space-y-6">
+                                            <!-- Validation Errors -->
+                                            @if ($errors->any() && !old('_method'))
+                                            <div class="rounded-md border border-destructive/50 bg-destructive/10 p-4">
+                                                <div class="flex">
+                                                    <i data-lucide="alert-circle" class="h-4 w-4 text-destructive mt-0.5 mr-2"></i>
+                                                    <div>
+                                                        <h3 class="text-sm font-medium text-destructive">Lỗi nhập liệu:</h3>
+                                                        <div class="mt-2 text-sm text-destructive/80">
+                                                            <ul role="list" class="list-disc space-y-1 pl-5">
+                                                                @foreach ($errors->all() as $error)
+                                                                <li>{{ $error }}</li>
+                                                                @endforeach
+                                                            </ul>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            @endif
+
+                                            <div class="space-y-4">
+                                                <!-- Mã tòa nhà -->
+                                                <div class="space-y-2">
+                                                    <label class="text-sm font-medium leading-none" for="create_code">Mã tòa nhà</label>
+                                                    <input type="text" name="code" id="create_code" value="{{ old('code') }}" required placeholder="Ví dụ: TA, TB, T1..." class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring">
+                                                </div>
+
+                                                <!-- Tên tòa nhà -->
+                                                <div class="space-y-2">
+                                                    <label class="text-sm font-medium leading-none" for="create_name">Tên tòa nhà</label>
+                                                    <input type="text" name="name" id="create_name" value="{{ old('name') }}" required placeholder="Ví dụ: Tòa nhà A, Tòa nhà B..." class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring">
+                                                </div>
+
+                                                <!-- Số tầng -->
+                                                <div class="space-y-2">
+                                                    <label class="text-sm font-medium leading-none" for="create_floors">Số tầng</label>
+                                                    <input type="number" name="floors" id="create_floors" value="{{ old('floors') }}" required min="1" placeholder="Ví dụ: 5" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring">
+                                                </div>
+
+                                                <!-- Mô tả -->
+                                                <div class="space-y-2">
+                                                    <label class="text-sm font-medium leading-none" for="create_description">Mô tả chi tiết</label>
+                                                    <textarea name="description" id="create_description" rows="4" placeholder="Nhập ghi chú hoặc mô tả về tòa nhà này..." class="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring">{{ old('description') }}</textarea>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!-- Footer -->
+                                        <div class="border-t border-border px-6 py-4 bg-muted/30 flex justify-end gap-3">
+                                            <button type="button" @click="showCreatePanel = false" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2">
+                                                Hủy
+                                            </button>
+                                            <button type="submit" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2">
+                                                <i data-lucide="save" class="mr-2 h-4 w-4"></i> Lưu lại
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <!-- ========================================== -->
+        <!-- SLIDE-OVER EDIT BUILDING                   -->
+        <!-- ========================================== -->
+        <template x-teleport="body">
+            <div x-show="showEditPanel" class="relative z-50" aria-labelledby="slide-over-title" role="dialog" aria-modal="true">
+                <!-- Background backdrop -->
+                <div x-show="showEditPanel"
+                    x-transition:enter="ease-in-out duration-300"
+                    x-transition:enter-start="opacity-0"
+                    x-transition:enter-end="opacity-100"
+                    x-transition:leave="ease-in-out duration-300"
+                    x-transition:leave-start="opacity-100"
+                    x-transition:leave-end="opacity-0"
+                    class="fixed inset-0 bg-black/50 transition-opacity backdrop-blur-sm"
+                    @click="showEditPanel = false"></div>
+
+                <div class="fixed inset-0 overflow-hidden">
+                    <div class="absolute inset-0 overflow-hidden">
+                        <div class="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10">
+                            <div x-show="showEditPanel"
+                                x-transition:enter="transform transition ease-in-out duration-300 sm:duration-500"
+                                x-transition:enter-start="translate-x-full"
+                                x-transition:enter-end="translate-x-0"
+                                x-transition:leave="transform transition ease-in-out duration-300 sm:duration-500"
+                                x-transition:leave-start="translate-x-0"
+                                x-transition:leave-end="translate-x-full"
+                                class="pointer-events-auto w-screen max-w-md">
+
+                                <!-- Panel content -->
+                                <div class="flex h-full flex-col overflow-y-auto bg-background shadow-xl border-l border-border">
+                                    <div class="px-6 py-6 border-b border-border bg-muted/30">
+                                        <div class="flex items-start justify-between">
+                                            <div>
+                                                <h2 class="text-lg font-semibold leading-none tracking-tight">Sửa tòa nhà</h2>
+                                                <p class="text-sm text-muted-foreground mt-2">Cập nhật thông tin chi tiết của tòa nhà này.</p>
+                                            </div>
+                                            <div class="ml-3 flex h-7 items-center">
+                                                <button @click="showEditPanel = false" type="button" class="relative rounded-md bg-background text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring">
+                                                    <i data-lucide="x" class="h-4 w-4"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <form :action="'/buildings/' + selectedBuilding.id" method="POST" class="flex-1 flex flex-col">
+                                        @csrf
+                                        @method('PUT')
+                                        <input type="hidden" name="building_id" :value="selectedBuilding.id">
+                                        <div class="flex-1 px-6 py-6 space-y-6">
+                                            <!-- Validation Errors -->
+                                            @if ($errors->any() && old('_method') === 'PUT')
+                                            <div class="rounded-md border border-destructive/50 bg-destructive/10 p-4">
+                                                <div class="flex">
+                                                    <i data-lucide="alert-circle" class="h-4 w-4 text-destructive mt-0.5 mr-2"></i>
+                                                    <div>
+                                                        <h3 class="text-sm font-medium text-destructive">Lỗi nhập liệu:</h3>
+                                                        <div class="mt-2 text-sm text-destructive/80">
+                                                            <ul role="list" class="list-disc space-y-1 pl-5">
+                                                                @foreach ($errors->all() as $error)
+                                                                <li>{{ $error }}</li>
+                                                                @endforeach
+                                                            </ul>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            @endif
+
+                                            <div class="space-y-4">
+                                                <!-- Mã tòa nhà -->
+                                                <div class="space-y-2">
+                                                    <label class="text-sm font-medium leading-none" for="edit_code">Mã tòa nhà</label>
+                                                    <input type="text" name="code" id="edit_code" x-model="selectedBuilding.code" required placeholder="Ví dụ: TA, TB, T1..." class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring">
+                                                </div>
+
+                                                <!-- Tên tòa nhà -->
+                                                <div class="space-y-2">
+                                                    <label class="text-sm font-medium leading-none" for="edit_name">Tên tòa nhà</label>
+                                                    <input type="text" name="name" id="edit_name" x-model="selectedBuilding.name" required placeholder="Ví dụ: Tòa nhà A, Tòa nhà B..." class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring">
+                                                </div>
+
+                                                <!-- Số tầng -->
+                                                <div class="space-y-2">
+                                                    <label class="text-sm font-medium leading-none" for="edit_floors">Số tầng</label>
+                                                    <input type="number" name="floors" id="edit_floors" x-model="selectedBuilding.floors" required min="1" placeholder="Ví dụ: 5" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring">
+                                                </div>
+
+                                                <!-- Mô tả -->
+                                                <div class="space-y-2">
+                                                    <label class="text-sm font-medium leading-none" for="edit_description">Mô tả chi tiết</label>
+                                                    <textarea name="description" id="edit_description" x-model="selectedBuilding.description" rows="4" placeholder="Nhập ghi chú hoặc mô tả về tòa nhà này..." class="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"></textarea>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!-- Footer -->
+                                        <div class="border-t border-border px-6 py-4 bg-muted/30 flex justify-end gap-3">
+                                            <button type="button" @click="showEditPanel = false" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2">
+                                                Hủy
+                                            </button>
+                                            <button type="submit" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2">
+                                                <i data-lucide="save" class="mr-2 h-4 w-4"></i> Cập nhật
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <!-- ========================================== -->
+        <!-- CUSTOM DELETE CONFIRMATION MODAL           -->
+        <!-- ========================================== -->
+        <template x-teleport="body">
+            <div x-show="showDeleteModal" class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+                <!-- Backdrop -->
+                <div x-show="showDeleteModal"
+                    x-transition:enter="ease-out duration-300"
+                    x-transition:enter-start="opacity-0"
+                    x-transition:enter-end="opacity-100"
+                    x-transition:leave="ease-in duration-200"
+                    x-transition:leave-start="opacity-100"
+                    x-transition:leave-end="opacity-0"
+                    class="fixed inset-0 bg-black/50 transition-opacity backdrop-blur-sm"
+                    @click="showDeleteModal = false"></div>
+
+                <!-- Modal Content Wrapper -->
+                <div x-show="showDeleteModal"
+                    x-transition:enter="ease-out duration-300"
+                    x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                    x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                    x-transition:leave="ease-in duration-200"
+                    x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                    x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                    class="relative transform overflow-hidden rounded-lg bg-background border border-border shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg p-6">
+
+                    <div class="sm:flex sm:items-start">
+                        <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-destructive/10 text-destructive sm:mx-0 sm:h-10 sm:w-10">
+                            <i data-lucide="alert-triangle" class="h-6 w-6"></i>
+                        </div>
+                        <div class="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
+                            <h3 class="text-base font-semibold leading-6 text-foreground" id="modal-title">Xác nhận xóa</h3>
+                            <div class="mt-2">
+                                <p class="text-sm text-muted-foreground" x-text="deleteConfirmMessage"></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                        <button type="button" @click="showDeleteModal = false" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2">
+                            Hủy bỏ
+                        </button>
+                        <form :action="deleteActionUrl" method="POST" class="inline">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="w-full inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-destructive text-destructive-foreground shadow hover:bg-destructive/90 h-9 px-4 py-2">
+                                Xác nhận xóa
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </template>
     </div>
-</div>
-@endsection
+
+    <script>
+        document.addEventListener('alpine:initialized', () => {
+            Alpine.effect(() => {
+                setTimeout(() => {
+                    if (typeof lucide !== 'undefined') {
+                        lucide.createIcons();
+                    }
+                }, 50);
+            });
+        });
+    </script>
+    @endsection
