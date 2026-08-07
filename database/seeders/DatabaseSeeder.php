@@ -26,6 +26,7 @@ class DatabaseSeeder extends Seeder
             BuildingSeeder::class,
             RoomSeeder::class,
             BedSeeder::class,
+            ContractSeeder::class,
             ServiceTypeSeeder::class,
             ViolationTypeSeeder::class,
             ViolationRecordSeeder::class,

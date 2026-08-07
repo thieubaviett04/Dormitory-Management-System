@@ -70,3 +70,19 @@ API thành công trả `message` và `data`. Lỗi validation trả HTTP `422` v
 ## 9. Lưu ý vận hành
 
 `allocations` là nguồn dữ liệu chính để xác định sinh viên đang ở đâu. `beds.status` và `rooms.status` được đồng bộ trong service để phục vụ giao diện. Không được tự gán giường thành `occupied` nếu không có allocation tương ứng.
+
+## 10. Dữ liệu mẫu
+
+`ContractSeeder` phụ thuộc vào dữ liệu tòa nhà, phòng và giường; `DatabaseSeeder` đã gọi đúng thứ tự này. Một cơ sở dữ liệu mới có thể được tạo dữ liệu mẫu bằng:
+
+```bash
+php artisan migrate:fresh --seed
+```
+
+Để chỉ tạo hoặc đồng bộ lại dữ liệu mẫu Module 3 trên cơ sở dữ liệu đã có sẵn cấu trúc KTX, chạy:
+
+```bash
+php artisan db:seed --class=ContractSeeder
+```
+
+Seeder tạo 5 tình huống: hợp đồng đang hiệu lực, đã chuyển giường, đã gia hạn, đã thanh lý và đã hết hạn. Các bản ghi Module 3 được nhận diện bằng mã `SEED-...`; có thể chạy lại mà không tạo trùng. Không dùng lệnh này trên dữ liệu vận hành nếu các giường mẫu đã được phân cho hợp đồng thật.
