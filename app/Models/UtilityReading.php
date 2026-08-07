@@ -18,5 +18,19 @@ class UtilityReading extends Model
 
     protected $casts = [
         'billing_month' => 'date',
+        'electricity_start' => 'integer',
+        'electricity_end' => 'integer',
+        'water_start' => 'integer',
+        'water_end' => 'integer',
     ];
+
+    public function room()
+    {
+        return $this->belongsTo(Room::class);
+    }
+
+    public function recorder()
+    {
+        return $this->belongsTo(User::class, 'recorded_by');
+    }
 }

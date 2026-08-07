@@ -2,7 +2,7 @@
 
 ## Phạm vi
 
-ERD dưới đây phản ánh các khóa ngoại và ràng buộc đang có trong migrations của Module 1–3: cơ sở vật chất, đăng ký chỗ ở, phân giường và hợp đồng. Đây là nguồn tham chiếu cho các thay đổi liên quan đến `Allocation` và `Contract`.
+ERD dưới đây phản ánh các thực thể, khóa ngoại và ràng buộc logic của toàn bộ hệ thống. Các bảng thuộc Module Dịch vụ, Hóa đơn và Vi phạm được vẽ đầy đủ các quan hệ để thể hiện đúng logic nghiệp vụ, dù trong code một số cột hiện tại mới chỉ là `unsignedBigInteger`.
 
 ```mermaid
 erDiagram
@@ -106,6 +106,65 @@ erDiagram
         integer last_number
     }
 
+    SERVICE_TYPES {
+        bigint id PK
+        string name
+        decimal price
+        string unit
+        text description
+    }
+
+    UTILITY_READINGS {
+        bigint id PK
+        bigint room_id FK
+        date billing_month
+        integer electricity_start
+        integer electricity_end
+        integer water_start
+        integer water_end
+        bigint recorded_by FK
+    }
+
+    INVOICES {
+        bigint id PK
+        string invoice_code UK
+        bigint room_id FK
+        bigint student_id FK
+        date billing_month
+        decimal total_amount
+        enum status
+        timestamp paid_at
+        string payment_method
+    }
+
+    INVOICE_ITEMS {
+        bigint id PK
+        bigint invoice_id FK
+        bigint service_type_id FK
+        string item_name
+        decimal quantity
+        decimal price
+        decimal subtotal
+    }
+
+    VIOLATION_TYPES {
+        bigint id PK
+        string name UK
+        string severity
+        decimal fine_amount
+        text description
+    }
+
+    VIOLATION_RECORDS {
+        bigint id PK
+        bigint student_id FK
+        bigint violation_type_id FK
+        date record_date
+        text description
+        bigint recorded_by FK
+        enum status
+    }
+
     BUILDINGS ||--o{ ROOMS : contains
     ROOMS ||--o{ BEDS : contains
     STUDENTS ||--o{ ROOM_REGISTRATIONS : submits
@@ -121,6 +180,16 @@ erDiagram
     USERS o|--o{ ALLOCATIONS : releases
     CONTRACTS ||--o{ CONTRACT_RENEWALS : has
     USERS o|--o{ CONTRACT_RENEWALS : renews
+
+    ROOMS ||--o{ UTILITY_READINGS : has
+    USERS o|--o{ UTILITY_READINGS : records
+    ROOMS ||--o{ INVOICES : billed_for
+    STUDENTS o|--o{ INVOICES : billed_to
+    INVOICES ||--o{ INVOICE_ITEMS : contains
+    SERVICE_TYPES o|--o{ INVOICE_ITEMS : categorized_as
+    STUDENTS ||--o{ VIOLATION_RECORDS : commits
+    VIOLATION_TYPES ||--o{ VIOLATION_RECORDS : classifies
+    USERS o|--o{ VIOLATION_RECORDS : records
 ```
 
 ## Cách đọc luồng Module 3
@@ -152,16 +221,10 @@ flowchart LR
 | `allocations` | Mỗi giường và mỗi hợp đồng tối đa một allocation có `released_at IS NULL`. |
 | `contract_renewals` | `new_end_date` phải sau `previous_end_date`. |
 
-## Các bảng ngoài phạm vi quan hệ khóa ngoại hoàn chỉnh
+## Ràng buộc khóa ngoại của Dịch vụ, Hóa đơn và Vi phạm
 
-Các bảng dịch vụ/hóa đơn/vi phạm hiện có trong schema nhưng một số cột liên kết vẫn là `unsignedBigInteger`, chưa có foreign key vật lý: `utility_readings.room_id`, `invoices.room_id`, `invoices.student_id`, `invoice_items.service_type_id`, `violation_records.student_id` và `violation_records.recorded_by`.
+Các bảng dịch vụ/hóa đơn/vi phạm hiện có trong schema nhưng một số cột liên kết vẫn là `unsignedBigInteger`, chưa có foreign key vật lý (như `utility_readings.room_id`, `invoices.room_id`, `invoices.student_id`, `invoice_items.service_type_id`, `violation_records.student_id` và `violation_records.recorded_by`).
 
-Vì vậy, ERD không vẽ các liên kết đó như ràng buộc database. Hai quan hệ khóa ngoại thực tế của nhóm bảng này là:
+Tuy nhiên, để phản ánh đúng logic nghiệp vụ, ERD ở trên vẽ tất cả các quan hệ này dưới dạng liên kết khóa ngoại hoàn chỉnh (nét liền) và đánh dấu FK đầy đủ. 
 
-```mermaid
-erDiagram
-    INVOICES ||--o{ INVOICE_ITEMS : contains
-    VIOLATION_TYPES ||--o{ VIOLATION_RECORDS : classifies
-```
-
-Khi Module Dịch vụ/Hóa đơn hoặc Vi phạm được chuẩn hóa, cần bổ sung foreign key tương ứng trước khi mở rộng ERD chính.
+Khi Module Dịch vụ/Hóa đơn hoặc Vi phạm được chuẩn hóa, hệ thống sẽ cần bổ sung foreign key vật lý tương ứng trong database migrations để code đồng bộ hoàn toàn với thiết kế trên ERD.
