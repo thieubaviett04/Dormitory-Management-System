@@ -12,4 +12,9 @@ class ServiceType extends Model
         'unit',
         'description'
     ];
+
+    public function invoiceItems()
+    {
+        return $this->hasMany(InvoiceItem::class);
+    }
 }

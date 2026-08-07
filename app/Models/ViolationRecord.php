@@ -25,4 +25,14 @@ class ViolationRecord extends Model
     {
         return $this->belongsTo(ViolationType::class);
     }
+
+    public function student()
+    {
+        return $this->belongsTo(Student::class);
+    }
+
+    public function recorder()
+    {
+        return $this->belongsTo(User::class, 'recorded_by');
+    }
 }

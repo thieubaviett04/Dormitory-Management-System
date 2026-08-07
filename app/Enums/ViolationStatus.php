@@ -4,6 +4,6 @@ namespace App\Enums;
 
 enum ViolationStatus: string
 {
-    case Pending = 'pending';  
-    case Resolved = 'resolved'; 
+    case Pending = 'pending';
+    case Resolved = 'resolved';
 }

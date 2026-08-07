@@ -13,7 +13,7 @@ class ViolationType extends Model
         'description'
     ];
 
-    public function violationRecord()
+    public function violationRecords()
     {
         return $this->hasMany(ViolationRecord::class);
     }
