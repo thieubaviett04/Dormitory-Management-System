@@ -43,20 +43,6 @@ class RoomController extends Controller
             'capacity' => 'required|integer|min:1',
             'status' => 'required|in:available,full,maintenance',
         ]);
-
-        $activeAllocationCount = $room->allocations()->active()->count();
-        if ((int) $request->capacity < $activeAllocationCount) {
-            throw ValidationException::withMessages([
-                'capacity' => 'Sức chứa không được nhỏ hơn số sinh viên đang ở trong phòng.',
-            ]);
-        }
-
-        if ($request->status === 'maintenance' && $activeAllocationCount > 0) {
-            throw ValidationException::withMessages([
-                'status' => 'Phải chuyển hoặc trả hết giường trước khi đưa phòng vào bảo trì.',
-            ]);
-        }
-
         Room::create([
             'building_id' => $request->building_id,
             'room_number' => $request->room_number,
@@ -103,6 +89,18 @@ class RoomController extends Controller
             'capacity' => 'required|integer|min:1',
             'status' => 'required|in:available,full,maintenance',
         ]);
+        $activeAllocationCount = $room->allocations()->active()->count();
+        if ((int) $request->capacity < $activeAllocationCount) {
+            throw ValidationException::withMessages([
+                'capacity' => 'Sức chứa không được nhỏ hơn số sinh viên đang ở trong phòng.',
+            ]);
+        }
+
+        if ($request->status === 'maintenance' && $activeAllocationCount > 0) {
+            throw ValidationException::withMessages([
+                'status' => 'Phải chuyển hoặc trả hết giường trước khi đưa phòng vào bảo trì.',
+            ]);
+        }
 
         $room->update([
             'building_id' => $request->building_id,
