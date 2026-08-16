@@ -19,11 +19,10 @@ Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login.submit');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
-// Các route nghiệp vụ yêu cầu đăng nhập (middleware auth)
-Route::middleware('auth')->group(function () {
-
+// Các route nghiệp vụ yêu cầu đăng nhập và phân quyền cho STUDENT
+Route::middleware(['auth', 'role:student'])->group(function () {
     // ==========================================
-    // MODULE 2: ĐĂNG KÝ CHỖ Ở (ROUTES)
+    // MODULE 2: ĐĂNG KÝ CHỖ Ở (ROUTES) - STUDENT
     // ==========================================
     Route::prefix('registration')->name('registration.')->group(function () {
         // 1. Sinh viên đăng ký phòng (Phương thức POST)
@@ -34,7 +33,15 @@ Route::middleware('auth')->group(function () {
 
         // 3. Xem trạng thái đơn của sinh viên (Phương thức GET)
         Route::get('/status/{student}', [RoomRegistrationController::class, 'showStatus'])->name('status');
+    });
+});
 
+// Các route nghiệp vụ yêu cầu đăng nhập và phân quyền cho ADMIN
+Route::middleware(['auth', 'role:admin'])->group(function () {
+    // ==========================================
+    // MODULE 2: ĐĂNG KÝ CHỖ Ở (ROUTES) - ADMIN
+    // ==========================================
+    Route::prefix('registration')->name('registration.')->group(function () {
         // 4. Cán bộ duyệt / từ chối đơn (Phương thức PUT)
         Route::put('/update/{roomRegistration}', [RoomRegistrationController::class, 'updateStatus'])->name('update');
 
@@ -42,7 +49,6 @@ Route::middleware('auth')->group(function () {
         Route::get('/pending', [RoomRegistrationController::class, 'pending'])->name('pending');
         Route::get('/waitlist', [RoomRegistrationController::class, 'waitlist'])->name('waitlist');
     });
-
     // Resource routes
     Route::resource('buildings', BuildingController::class);
     Route::resource('rooms', RoomController::class);
