@@ -42,8 +42,16 @@ class BedController extends Controller
     {
         $request->validate([
             'room_id' => 'required|exists:rooms,id',
-            'bed_number' => 'required|max:20',
+            'bed_number' => [
+                'required',
+                'max:20',
+                \Illuminate\Validation\Rule::unique('beds')->where(function ($query) use ($request) {
+                    return $query->where('room_id', $request->room_id);
+                }),
+            ],
             'status' => 'required|in:available,maintenance',
+        ], [
+            'bed_number.unique' => 'Số giường này đã tồn tại trong phòng đã chọn.',
         ]);
 
         Bed::create([
@@ -89,8 +97,16 @@ class BedController extends Controller
 
         $request->validate([
             'room_id' => 'required|exists:rooms,id',
-            'bed_number' => 'required|max:20',
+            'bed_number' => [
+                'required',
+                'max:20',
+                \Illuminate\Validation\Rule::unique('beds')->where(function ($query) use ($request) {
+                    return $query->where('room_id', $request->room_id);
+                })->ignore($bed->id),
+            ],
             'status' => 'required|in:available,occupied,maintenance',
+        ], [
+            'bed_number.unique' => 'Số giường này đã tồn tại trong phòng đã chọn.',
         ]);
 
         $hasActiveAllocation = $bed->allocations()->active()->exists();

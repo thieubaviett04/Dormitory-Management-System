@@ -16,7 +16,6 @@ class BuildingSeeder extends Seeder
             'code' => 'A1',
             'name' => 'Kí túc xá A1',
             'floors' => 10,
-            'gender_policy' => 'male',
             'description' => 'Kí túc xá dành cho giảng viên và sinh viên ưu tú',
         ]);
 
@@ -24,7 +23,6 @@ class BuildingSeeder extends Seeder
             'code' => 'A3',
             'name' => 'Kí túc xá A3',
             'floors' => 7,
-            'gender_policy' => 'mixed',
             'description' => 'Khu nhà ở dành cho sinh viên nước ngoài',
         ]);
 
@@ -32,7 +30,6 @@ class BuildingSeeder extends Seeder
             'code' => 'T1',
             'name' => 'Ký túc xá K1',
             'floors' => 6,
-            'gender_policy' => 'female',
             'description' => 'Ký túc xá cao cấp đầy đủ tiện nghi',
         ]);
     }

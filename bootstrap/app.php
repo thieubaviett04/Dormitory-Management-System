@@ -18,6 +18,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'registration/cancel/*',
             'registration/update/*',
         ]);
+
+        $middleware->alias([
+            'role' => \App\Http\Middleware\RoleMiddleware::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //
