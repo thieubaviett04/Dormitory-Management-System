@@ -36,11 +36,18 @@ class AuthController extends Controller
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
             $request->session()->regenerate();
 
+            $user = Auth::user();
+            if ($user->role === 'admin') {
+                return redirect()->route('admin.dashboard');
+            } elseif ($user->role === 'student') {
+                return redirect()->route('student.dashboard');
+            }
+
             return redirect()->intended('/');
         }
 
         throw ValidationException::withMessages([
-            'email' => __('auth.failed'),
+            'email' => ['Tài khoản hoặc mật khẩu không chính xác.'],
         ]);
     }
 
@@ -58,6 +65,6 @@ class AuthController extends Controller
 
         $request->session()->regenerateToken();
 
-        return redirect('/');
+        return redirect()->route('login');
     }
 }

@@ -38,11 +38,20 @@ class RoomController extends Controller
     {
         $request->validate([
             'building_id' => 'required|exists:buildings,id',
-            'room_number' => 'required|max:20',
+            'room_number' => [
+                'required',
+                'max:20',
+                \Illuminate\Validation\Rule::unique('rooms')->where(function ($query) use ($request) {
+                    return $query->where('building_id', $request->building_id);
+                }),
+            ],
             'floor' => 'required|integer|min:1',
             'capacity' => 'required|integer|min:1',
             'status' => 'required|in:available,full,maintenance',
+        ], [
+            'room_number.unique' => 'Số phòng này đã tồn tại trong tòa nhà đã chọn.',
         ]);
+
         Room::create([
             'building_id' => $request->building_id,
             'room_number' => $request->room_number,
@@ -84,11 +93,20 @@ class RoomController extends Controller
 
         $request->validate([
             'building_id' => 'required|exists:buildings,id',
-            'room_number' => 'required|max:20',
+            'room_number' => [
+                'required',
+                'max:20',
+                \Illuminate\Validation\Rule::unique('rooms')->where(function ($query) use ($request) {
+                    return $query->where('building_id', $request->building_id);
+                })->ignore($room->id),
+            ],
             'floor' => 'required|integer|min:1',
             'capacity' => 'required|integer|min:1',
             'status' => 'required|in:available,full,maintenance',
+        ], [
+            'room_number.unique' => 'Số phòng này đã tồn tại trong tòa nhà đã chọn.',
         ]);
+
         $activeAllocationCount = $room->allocations()->active()->count();
         if ((int) $request->capacity < $activeAllocationCount) {
             throw ValidationException::withMessages([

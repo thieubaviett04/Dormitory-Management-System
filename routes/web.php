@@ -21,6 +21,10 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 // Các route nghiệp vụ yêu cầu đăng nhập và phân quyền cho STUDENT
 Route::middleware(['auth', 'role:student'])->group(function () {
+    Route::get('/student/dashboard', function () {
+        return view('student.dashboard');
+    })->name('student.dashboard');
+
     // ==========================================
     // MODULE 2: ĐĂNG KÝ CHỖ Ở (ROUTES) - STUDENT
     // ==========================================
@@ -38,6 +42,16 @@ Route::middleware(['auth', 'role:student'])->group(function () {
 
 // Các route nghiệp vụ yêu cầu đăng nhập và phân quyền cho ADMIN
 Route::middleware(['auth', 'role:admin'])->group(function () {
+    Route::get('/admin/dashboard', function () {
+        $stats = [
+            'buildings' => \App\Models\Building::count(),
+            'rooms'     => \App\Models\Room::count(),
+            'beds'      => \App\Models\Bed::count(),
+            'beds_available' => \App\Models\Bed::where('status', 'available')->count(),
+        ];
+        return view('admin.dashboard', compact('stats'));
+    })->name('admin.dashboard');
+
     // ==========================================
     // MODULE 2: ĐĂNG KÝ CHỖ Ở (ROUTES) - ADMIN
     // ==========================================

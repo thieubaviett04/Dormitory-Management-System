@@ -11,7 +11,6 @@ class Building extends Model
         'code',
         'name',
         'floors',
-        'gender_policy',
         'description',
     ];
 
