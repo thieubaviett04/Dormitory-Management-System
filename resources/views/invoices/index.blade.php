@@ -253,8 +253,8 @@
                                             <p class="text-sm text-muted-foreground mt-2">Nhập chỉ số điện nước sử dụng để hệ thống tự sinh hóa đơn.</p>
                                         </div>
                                         <div class="ml-3 flex h-7 items-center">
-                                            <button @click="showCreatePanel = false; $dispatch('reset-create-form')" type="button" class="relative rounded-md bg-background text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring">
-                                                <i data-lucide="x" class="h-4 w-4"></i>
+                                            <button type="button" class="relative rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 p-1.5 transition-colors focus:outline-none" @click="showCreatePanel = false; $dispatch('reset-create-form')">
+                                                <i data-lucide="x" class="h-5 w-5"></i>
                                             </button>
                                         </div>
                                     </div>
@@ -328,7 +328,7 @@
                                                     <button type="button" @click="open = !open" @click.away="open = false"
                                                         class="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all hover:border-primary/50">
                                                         <span x-text="selectedText" :class="selected === '' ? 'text-muted-foreground' : 'text-foreground'"></span>
-                                                        <i data-lucide="chevrons-up-down" class="h-4 w-4 opacity-50" :class="open ? 'opacity-100' : ''"></i>
+                                                        <i data-lucide="chevron-down" class="h-4 w-4 opacity-50 transition-transform duration-200" :class="open ? 'rotate-180 opacity-100' : ''"></i>
                                                     </button>
 
                                                     <div x-show="open"
@@ -504,8 +504,8 @@
                                             </div>
                                         </div>
                                         <div class="ml-3 flex h-7 items-center">
-                                            <button @click="showDetailPanel = false" type="button" class="relative rounded-md bg-background text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring">
-                                                <i data-lucide="x" class="h-4 w-4"></i>
+                                            <button type="button" class="relative rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 p-1.5 transition-colors focus:outline-none" @click="showDetailPanel = false">
+                                                <i data-lucide="x" class="h-5 w-5"></i>
                                             </button>
                                         </div>
                                     </div>
