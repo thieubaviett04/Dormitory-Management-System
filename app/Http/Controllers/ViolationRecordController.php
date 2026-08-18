@@ -87,4 +87,43 @@ class ViolationRecordController extends Controller
 
         return redirect()->back()->with('success', 'Đã cập nhật trạng thái biên bản thành Đã giải quyết.');
     }
+
+    public function update(Request $request, $id)
+    {
+        $record = ViolationRecord::findOrFail($id);
+
+        if ($record->status == ViolationStatus::Resolved) {
+            return redirect()->route('violation.index')->withErrors(['error' => 'Không thể sửa biên bản đã xử lý.']);
+        }
+
+        $validated = $request->validate([
+            'violation_type_id' => 'required|exists:violation_types,id',
+            'record_date' => 'required|date|before_or_equal:today',
+            'description' => 'nullable|string|max:1000',
+        ], [
+            'violation_type_id.required' => 'Vui lòng chọn loại vi phạm.',
+            'violation_type_id.exists' => 'Loại vi phạm không tồn tại.',
+            'record_date.required' => 'Vui lòng nhập ngày vi phạm.',
+            'record_date.date' => 'Ngày vi phạm không hợp lệ.',
+            'record_date.before_or_equal' => 'Ngày vi phạm không được lớn hơn ngày hiện tại.',
+            'description.max' => 'Mô tả không được vượt quá 1000 ký tự.',
+        ]);
+
+        $record->update($validated);
+
+        return redirect()->route('violation.index')->with('success', 'Đã cập nhật biên bản vi phạm thành công.');
+    }
+
+    public function destroy($id)
+    {
+        $record = ViolationRecord::findOrFail($id);
+
+        if ($record->status == ViolationStatus::Resolved) {
+            return redirect()->route('violation.index')->withErrors(['error' => 'Không thể xóa biên bản đã xử lý để đảm bảo tính toàn vẹn dữ liệu.']);
+        }
+
+        $record->delete();
+
+        return redirect()->route('violation.index')->with('success', 'Đã xóa biên bản vi phạm thành công.');
+    }
 }
