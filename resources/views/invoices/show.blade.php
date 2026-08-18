@@ -82,29 +82,12 @@
             <a href="{{ route('invoice.index') }}" class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-10 px-6 py-2">
                 <i data-lucide="arrow-left" class="mr-2 h-4 w-4"></i> Quay lại
             </a>
-            <button onclick="window.print()" class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-primary text-primary-foreground shadow hover:bg-primary/90 h-10 px-6 py-2">
+            <a href="{{ route('invoice.print', $invoice->id) }}" target="_blank" class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-primary text-primary-foreground shadow hover:bg-primary/90 h-10 px-6 py-2">
                 <i data-lucide="printer" class="mr-2 h-4 w-4"></i> In hóa đơn
-            </button>
+            </a>
         </footer>
     </div>
 </div>
 
-<style>
-    @media print {
-        body * {
-            visibility: hidden;
-        }
-        .bg-card, .bg-card * {
-            visibility: visible;
-        }
-        .bg-card {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            border: none;
-            box-shadow: none;
-        }
-    }
-</style>
+
 @endsection

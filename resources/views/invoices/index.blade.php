@@ -6,11 +6,17 @@
 <div class="space-y-6" x-data="{ 
     showCreatePanel: {{ $errors->any() ? 'true' : 'false' }},
     showDetailPanel: false, 
+    showEditPanel: false,
     selectedInvoice: null,
+    selectedEditInvoice: null,
     invoicesData: {{ json_encode($invoices) }},
     openDetail(id) {
         this.selectedInvoice = this.invoicesData.find(i => i.id == id);
         this.showDetailPanel = true;
+    },
+    openEdit(id) {
+        this.selectedEditInvoice = this.invoicesData.find(i => i.id == id);
+        this.showEditPanel = true;
     },
     formatDate(dateString) {
         if(!dateString) return '—';
@@ -93,8 +99,11 @@
                 </div>
             </form>
 
+            <a href="{{ route('invoice.bulk.create') }}" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2">
+                <i data-lucide="layers" class="mr-2 h-4 w-4"></i> Tạo hàng loạt
+            </a>
             <button @click="showCreatePanel = true; $dispatch('reset-create-form')" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2">
-                <i data-lucide="plus" class="mr-2 h-4 w-4"></i> Tạo hóa đơn
+                <i data-lucide="plus" class="mr-2 h-4 w-4"></i> Tạo lẻ
             </button>
         </div>
     </div>
@@ -165,7 +174,7 @@
                         <th class="h-10 px-4 text-center align-middle font-medium text-muted-foreground">Trạng thái</th>
                         <th class="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Ngày thanh toán</th>
                         <th class="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Phương thức</th>
-                        <th class="h-10 px-4 align-middle font-medium text-muted-foreground"></th>
+                        <th class="h-10 px-4 text-right align-middle font-medium text-muted-foreground">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody class="[&_tr:last-child]:border-0">
@@ -198,10 +207,22 @@
                             —
                             @endif
                         </td>
-                        <td class="p-4 align-middle text-right">
-                            <button @click="openDetail({{ $invoice->id }})" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 w-8 p-0">
+                        <td class="p-4 align-middle text-right flex items-center justify-end space-x-1">
+                            <button @click="openDetail({{ $invoice->id }})" title="Xem chi tiết" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 w-8 p-0">
                                 <i data-lucide="eye" class="h-4 w-4"></i>
                             </button>
+                            @if($invoice->status == \App\Enums\InvoiceStatus::Unpaid)
+                            <button @click="openEdit({{ $invoice->id }})" title="Sửa chỉ số" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 w-8 p-0">
+                                <i data-lucide="edit" class="h-4 w-4 text-blue-500"></i>
+                            </button>
+                            <form action="{{ route('invoice.destroy', $invoice->id) }}" method="POST" onsubmit="return confirm('Bạn có chắc chắn muốn xóa hóa đơn này không? Các dữ liệu điện nước cũng sẽ bị xóa.');" class="inline-block">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" title="Xóa" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 w-8 p-0">
+                                    <i data-lucide="trash-2" class="h-4 w-4 text-red-500"></i>
+                                </button>
+                            </form>
+                            @endif
                         </td>
                     </tr>
                     @empty
@@ -584,10 +605,43 @@
                                             @method('PATCH')
                                             <div class="space-y-2">
                                                 <label class="text-xs font-medium text-muted-foreground">Xác nhận thanh toán thủ công</label>
-                                                <select name="payment_method" required class="flex h-9 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring">
-                                                    <option value="bank_transfer">Chuyển khoản ngân hàng</option>
-                                                    <option value="cash">Tiền mặt tại quầy</option>
-                                                </select>
+                                                <div x-data="{ open: false, selected: 'bank_transfer', selectedText: 'Chuyển khoản ngân hàng' }" class="relative w-full">
+                                                    <input type="hidden" name="payment_method" x-model="selected">
+
+                                                    <button type="button" @click="open = !open" @click.away="open = false"
+                                                        class="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all hover:border-primary/50">
+                                                        <span x-text="selectedText" class="text-foreground"></span>
+                                                        <i data-lucide="chevron-down" class="h-4 w-4 opacity-50 transition-transform duration-200" :class="open ? 'rotate-180 opacity-100' : ''"></i>
+                                                    </button>
+
+                                                    <div x-show="open"
+                                                        x-transition:enter="transition ease-out duration-100"
+                                                        x-transition:enter-start="transform opacity-0 scale-95"
+                                                        x-transition:enter-end="transform opacity-100 scale-100"
+                                                        x-transition:leave="transition ease-in duration-75"
+                                                        x-transition:leave-start="transform opacity-100 scale-100"
+                                                        x-transition:leave-end="transform opacity-0 scale-95"
+                                                        class="absolute z-50 mt-1 w-full rounded-md border border-border bg-popover text-popover-foreground shadow-md outline-none" style="display: none;">
+                                                        <div class="p-1">
+                                                            <div @click="selected = 'bank_transfer'; selectedText = 'Chuyển khoản ngân hàng'; open = false"
+                                                                class="relative flex w-full cursor-pointer select-none items-center rounded-sm py-2 pl-8 pr-2 text-sm outline-none hover:bg-accent hover:text-accent-foreground transition-colors"
+                                                                :class="selected == 'bank_transfer' ? 'bg-accent/50 text-accent-foreground font-medium' : ''">
+                                                                <span x-show="selected == 'bank_transfer'" class="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+                                                                    <i data-lucide="check" class="h-4 w-4 text-primary"></i>
+                                                                </span>
+                                                                Chuyển khoản ngân hàng
+                                                            </div>
+                                                            <div @click="selected = 'cash'; selectedText = 'Tiền mặt tại quầy'; open = false"
+                                                                class="relative flex w-full cursor-pointer select-none items-center rounded-sm py-2 pl-8 pr-2 text-sm outline-none hover:bg-accent hover:text-accent-foreground transition-colors"
+                                                                :class="selected == 'cash' ? 'bg-accent/50 text-accent-foreground font-medium' : ''">
+                                                                <span x-show="selected == 'cash'" class="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+                                                                    <i data-lucide="check" class="h-4 w-4 text-primary"></i>
+                                                                </span>
+                                                                Tiền mặt tại quầy
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </div>
                                             <button type="submit" class="w-full inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-emerald-600 text-white shadow hover:bg-emerald-600/90 h-9 px-4 py-2">
                                                 <i data-lucide="check" class="mr-2 h-4 w-4"></i> Đánh dấu Đã thanh toán
@@ -596,11 +650,132 @@
                                     </template>
 
                                     <!-- Nút In ấn -->
-                                    <a :href="'/invoices/' + selectedInvoice?.id" target="_blank" class="w-full inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2">
+                                    <a :href="'/invoices/' + selectedInvoice?.id + '/print'" target="_blank" class="w-full inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2">
                                         <i data-lucide="printer" class="mr-2 h-4 w-4"></i> Xuất hóa đơn & In ấn
                                     </a>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <!-- ========================================== -->
+    <!-- SLIDE-OVER EDIT INVOICE READING            -->
+    <!-- ========================================== -->
+    <template x-teleport="body">
+        <div x-show="showEditPanel" class="relative z-50" aria-labelledby="slide-over-title" role="dialog" aria-modal="true" style="display: none;">
+            <div x-show="showEditPanel"
+                x-transition:enter="ease-in-out duration-300"
+                x-transition:enter-start="opacity-0"
+                x-transition:enter-end="opacity-100"
+                x-transition:leave="ease-in-out duration-300"
+                x-transition:leave-start="opacity-100"
+                x-transition:leave-end="opacity-0"
+                class="fixed inset-0 bg-black/50 transition-opacity backdrop-blur-sm"
+                @click="showEditPanel = false"></div>
+
+            <div class="fixed inset-0 overflow-hidden">
+                <div class="absolute inset-0 overflow-hidden">
+                    <div class="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10">
+                        <div x-show="showEditPanel"
+                            x-transition:enter="transform transition ease-in-out duration-300 sm:duration-500"
+                            x-transition:enter-start="translate-x-full"
+                            x-transition:enter-end="translate-x-0"
+                            x-transition:leave="transform transition ease-in-out duration-300 sm:duration-500"
+                            x-transition:leave-start="translate-x-0"
+                            x-transition:leave-end="translate-x-full"
+                            class="pointer-events-auto w-screen max-w-md">
+
+                            <!-- Panel content -->
+                            <div class="flex h-full flex-col overflow-y-auto bg-background shadow-xl border-l border-border" x-data="{ updateUrl: '' }" x-effect="if(selectedEditInvoice) { updateUrl = '{{ url('/') }}/invoices/' + selectedEditInvoice.id }">
+                                <div class="px-6 py-6 border-b border-border bg-muted/30">
+                                    <div class="flex items-start justify-between">
+                                        <div>
+                                            <h2 class="text-lg font-semibold leading-6" id="slide-over-title">Sửa chỉ số Điện / Nước</h2>
+                                            <p class="mt-1 text-sm text-muted-foreground" x-text="selectedEditInvoice ? 'Cập nhật lại số liệu cho ' + selectedEditInvoice.invoice_code : ''"></p>
+                                        </div>
+                                        <div class="ml-3 flex h-7 items-center">
+                                            <button type="button" @click="showEditPanel = false" class="relative rounded-md bg-transparent text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                                                <span class="absolute -inset-2.5"></span>
+                                                <span class="sr-only">Close panel</span>
+                                                <i data-lucide="x" class="h-5 w-5"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <template x-if="selectedEditInvoice && selectedEditInvoice.reading">
+                                    <form :action="updateUrl" method="POST" class="flex flex-1 flex-col justify-between">
+                                        @csrf
+                                        @method('PUT')
+                                        <div class="px-6 py-6 space-y-6">
+                                            <!-- Điện -->
+                                            <div class="space-y-4">
+                                                <h3 class="text-sm font-semibold text-blue-600 flex items-center">
+                                                    <i data-lucide="zap" class="mr-2 h-4 w-4"></i> Chỉ số Điện
+                                                </h3>
+                                                <div class="grid grid-cols-2 gap-4">
+                                                    <div class="space-y-2">
+                                                        <label class="text-xs font-medium text-muted-foreground">Số đầu (Tháng trước)</label>
+                                                        <input type="number" :value="selectedEditInvoice.reading.electricity_start" class="flex h-9 w-full rounded-md border border-input bg-muted px-3 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50 text-muted-foreground font-semibold" readonly tabindex="-1">
+                                                    </div>
+                                                    <div class="space-y-2">
+                                                        <label class="text-xs font-medium">Số cuối (Mới)</label>
+                                                        <input type="number" name="electricity_end" :value="selectedEditInvoice.reading.electricity_end" :min="selectedEditInvoice.reading.electricity_start + 1" required class="flex h-9 w-full rounded-md border-2 border-blue-200 bg-background px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 font-bold text-blue-700">
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="w-full h-px bg-border"></div>
+
+                                            <!-- Nước -->
+                                            <div class="space-y-4">
+                                                <h3 class="text-sm font-semibold text-emerald-600 flex items-center">
+                                                    <i data-lucide="droplets" class="mr-2 h-4 w-4"></i> Chỉ số Nước
+                                                </h3>
+                                                <div class="grid grid-cols-2 gap-4">
+                                                    <div class="space-y-2">
+                                                        <label class="text-xs font-medium text-muted-foreground">Số đầu (Tháng trước)</label>
+                                                        <input type="number" :value="selectedEditInvoice.reading.water_start" class="flex h-9 w-full rounded-md border border-input bg-muted px-3 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50 text-muted-foreground font-semibold" readonly tabindex="-1">
+                                                    </div>
+                                                    <div class="space-y-2">
+                                                        <label class="text-xs font-medium">Số cuối (Mới)</label>
+                                                        <input type="number" name="water_end" :value="selectedEditInvoice.reading.water_end" :min="selectedEditInvoice.reading.water_start + 1" required class="flex h-9 w-full rounded-md border-2 border-emerald-200 bg-background px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 font-bold text-emerald-700">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="rounded-md bg-amber-50 p-3 mt-4 border border-amber-200">
+                                                <div class="flex">
+                                                    <i data-lucide="info" class="h-4 w-4 text-amber-500 mr-2 flex-shrink-0 mt-0.5"></i>
+                                                    <p class="text-xs text-amber-800">Sau khi lưu, hệ thống sẽ tự động tính toán lại tiền điện/nước và cập nhật tổng tiền hóa đơn.</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Form Footer -->
+                                        <div class="border-t border-border px-6 py-4 bg-muted/30 flex justify-end gap-3">
+                                            <button type="button" @click="showEditPanel = false" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2">
+                                                Hủy
+                                            </button>
+                                            <button type="submit" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2">
+                                                <i data-lucide="save" class="mr-2 h-4 w-4"></i> Lưu Thay Đổi
+                                            </button>
+                                        </div>
+                                    </form>
+                                </template>
+                                
+                                <template x-if="selectedEditInvoice && !selectedEditInvoice.reading">
+                                    <div class="p-6 text-center text-muted-foreground text-sm flex flex-col items-center justify-center h-full">
+                                        <i data-lucide="alert-triangle" class="h-8 w-8 text-amber-500 mb-2"></i>
+                                        Không tìm thấy dữ liệu chỉ số công tơ của hóa đơn này. <br>Hóa đơn có thể được tạo thủ công mà không có số đo.
+                                    </div>
+                                </template>
+                            </div>
+
                         </div>
                     </div>
                 </div>
