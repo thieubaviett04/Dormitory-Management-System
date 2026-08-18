@@ -8,7 +8,8 @@
     showEditPanel: {{ $errors->any() && old('_method') === 'PUT' ? 'true' : 'false' }},
     showDeleteModal: false,
     deleteActionUrl: '',
-    deleteConfirmMessage: '',
+    deleteBuildingName: '',
+    deleteRoomCount: 0,
     selectedBuilding: {
         id: '{{ old('building_id') }}',
         code: '{{ old('code') }}',
@@ -26,9 +27,10 @@
         };
         this.showEditPanel = true;
     },
-    confirmDelete(actionUrl, message) {
+    confirmDelete(actionUrl, buildingName, roomCount) {
         this.deleteActionUrl = actionUrl;
-        this.deleteConfirmMessage = message;
+        this.deleteBuildingName = buildingName;
+        this.deleteRoomCount = roomCount;
         this.showDeleteModal = true;
     }
 }">
@@ -82,7 +84,7 @@
                                 <button @click="openEdit({{ json_encode($building) }})" class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 px-3">
                                     <i data-lucide="edit-3" class="mr-1.5 h-3.5 w-3.5"></i> Sửa
                                 </button>
-                                <button type="button" @click="confirmDelete('{{ route('buildings.destroy', $building->id) }}', 'Bạn có chắc chắn muốn xóa tòa nhà {{ $building->name }} và toàn bộ phòng thuộc về nó?')" class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-destructive text-destructive-foreground shadow hover:bg-destructive/90 h-8 px-3">
+                                <button type="button" @click="confirmDelete('{{ route('buildings.destroy', $building->id) }}', '{{ addslashes($building->name) }}', {{ $building->rooms()->count() }})" class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-destructive text-destructive-foreground shadow hover:bg-destructive/90 h-8 px-3">
                                     <i data-lucide="trash-2" class="mr-1.5 h-3.5 w-3.5"></i> Xóa
                                 </button>
                             </div>
@@ -349,10 +351,24 @@
                         <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-destructive/10 text-destructive sm:mx-0 sm:h-10 sm:w-10">
                             <i data-lucide="alert-triangle" class="h-6 w-6"></i>
                         </div>
-                        <div class="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
-                            <h3 class="text-base font-semibold leading-6 text-foreground" id="modal-title">Xác nhận xóa</h3>
-                            <div class="mt-2">
-                                <p class="text-sm text-muted-foreground" x-text="deleteConfirmMessage"></p>
+                        <div class="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left w-full">
+                            <h3 class="text-base font-semibold leading-6 text-foreground" id="modal-title">Xác nhận xóa tòa nhà</h3>
+                            <div class="mt-2 space-y-2">
+                                <p class="text-sm text-muted-foreground">
+                                    Bạn có chắc chắn muốn xóa tòa nhà <span class="font-semibold text-foreground" x-text="'\"' + deleteBuildingName + '\"'"></span> không?
+                                </p>
+                                <!-- Warning khi có phòng -->
+                                <template x-if="deleteRoomCount > 0">
+                                    <div class="rounded-md border border-amber-400/60 bg-amber-50 p-3 mt-3">
+                                        <div class="flex items-start gap-2">
+                                            <i data-lucide="triangle-alert" class="h-4 w-4 text-amber-600 mt-0.5 shrink-0"></i>
+                                            <div class="text-sm text-amber-800">
+                                                <p class="font-medium">Cảnh báo: Tòa nhà này đang có dữ liệu liên quan!</p>
+                                                <p class="mt-1">Hành động này sẽ xóa vĩnh viễn <span class="font-semibold" x-text="deleteRoomCount"></span> phòng cùng toàn bộ giường và dữ liệu phân bổ giường liên quan. Không thể hoàn tác!</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
                             </div>
                         </div>
                     </div>
@@ -365,6 +381,7 @@
                             @csrf
                             @method('DELETE')
                             <button type="submit" class="w-full inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-destructive text-destructive-foreground shadow hover:bg-destructive/90 h-9 px-4 py-2">
+                                <i data-lucide="trash-2" class="mr-2 h-4 w-4"></i>
                                 Xác nhận xóa
                             </button>
                         </form>

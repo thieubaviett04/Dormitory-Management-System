@@ -28,7 +28,7 @@ class BuildingSeeder extends Seeder
 
         Building::create([
             'code' => 'T1',
-            'name' => 'Ký túc xá K1',
+            'name' => 'Ký túc xá T1',
             'floors' => 6,
             'description' => 'Ký túc xá cao cấp đầy đủ tiện nghi',
         ]);

@@ -36,26 +36,38 @@ class RoomController extends Controller
      */
     public function store(Request $request)
     {
+        $building = Building::find($request->building_id);
+
         $request->validate([
             'building_id' => 'required|exists:buildings,id',
             'room_number' => [
                 'required',
                 'max:20',
+                'regex:/^\d{3,}$/',
                 \Illuminate\Validation\Rule::unique('rooms')->where(function ($query) use ($request) {
                     return $query->where('building_id', $request->building_id);
                 }),
             ],
-            'floor' => 'required|integer|min:1',
             'capacity' => 'required|integer|min:1',
             'status' => 'required|in:available,full,maintenance',
         ], [
             'room_number.unique' => 'Số phòng này đã tồn tại trong tòa nhà đã chọn.',
+            'room_number.regex' => 'Số phòng phải là chữ số và có ít nhất 3 ký tự (ví dụ: 101, 205, 1001).',
         ]);
+
+        // Tự động tính tầng từ số phòng
+        $floor = intdiv((int) $request->room_number, 100);
+
+        if ($building && $floor > $building->floors) {
+            return back()->withInput()->withErrors([
+                'room_number' => 'Số phòng "' . $request->room_number . '" ứng với tầng ' . $floor . ', vượt quá số tầng của tòa nhà (' . $building->floors . ' tầng).',
+            ]);
+        }
 
         Room::create([
             'building_id' => $request->building_id,
             'room_number' => $request->room_number,
-            'floor' => $request->floor,
+            'floor' => $floor,
             'capacity' => $request->capacity,
             'status' => $request->status,
         ]);
@@ -90,22 +102,33 @@ class RoomController extends Controller
     public function update(Request $request, string $id)
     {
         $room = Room::findOrFail($id);
+        $building = Building::find($request->building_id);
 
         $request->validate([
             'building_id' => 'required|exists:buildings,id',
             'room_number' => [
                 'required',
                 'max:20',
+                'regex:/^\d{3,}$/',
                 \Illuminate\Validation\Rule::unique('rooms')->where(function ($query) use ($request) {
                     return $query->where('building_id', $request->building_id);
                 })->ignore($room->id),
             ],
-            'floor' => 'required|integer|min:1',
             'capacity' => 'required|integer|min:1',
             'status' => 'required|in:available,full,maintenance',
         ], [
             'room_number.unique' => 'Số phòng này đã tồn tại trong tòa nhà đã chọn.',
+            'room_number.regex' => 'Số phòng phải là chữ số và có ít nhất 3 ký tự (ví dụ: 101, 205, 1001).',
         ]);
+
+        // Tự động tính tầng từ số phòng
+        $floor = intdiv((int) $request->room_number, 100);
+
+        if ($building && $floor > $building->floors) {
+            return back()->withInput()->withErrors([
+                'room_number' => 'Số phòng "' . $request->room_number . '" ứng với tầng ' . $floor . ', vượt quá số tầng của tòa nhà (' . $building->floors . ' tầng).',
+            ]);
+        }
 
         $activeAllocationCount = $room->allocations()->active()->count();
         if ((int) $request->capacity < $activeAllocationCount) {
@@ -123,7 +146,7 @@ class RoomController extends Controller
         $room->update([
             'building_id' => $request->building_id,
             'room_number' => $request->room_number,
-            'floor' => $request->floor,
+            'floor' => $floor,
             'capacity' => $request->capacity,
             'status' => $request->status,
         ]);
