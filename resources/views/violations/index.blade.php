@@ -99,10 +99,22 @@
                             </div>
                             @endif
                         </td>
-                        <td class="p-4 align-middle text-right">
-                            <button @click="openDetailPanel({{ $record->toJson() }})" class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors hover:bg-muted h-8 w-8 text-muted-foreground hover:text-foreground">
+                        <td class="p-4 align-middle text-right flex items-center justify-end space-x-1">
+                            <button @click="openDetailPanel({{ $record->toJson() }})" title="Xem chi tiết" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 w-8 p-0">
                                 <i data-lucide="eye" class="h-4 w-4"></i>
                             </button>
+                            @if($record->status->value == 'pending' || $record->status == 'pending')
+                            <button @click="openEditPanel({{ $record->toJson() }})" title="Sửa biên bản" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 w-8 p-0">
+                                <i data-lucide="edit" class="h-4 w-4 text-blue-500"></i>
+                            </button>
+                            <form action="{{ route('violation.destroy', $record->id) }}" method="POST" onsubmit="return confirm('Bạn có chắc chắn muốn xóa biên bản vi phạm này không?');" class="inline-block">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" title="Xóa" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 w-8 p-0">
+                                    <i data-lucide="trash-2" class="h-4 w-4 text-red-500"></i>
+                                </button>
+                            </form>
+                            @endif
                         </td>
                     </tr>
                     @empty
@@ -404,6 +416,251 @@
     </div>
     </template>
 
+        <!-- EDIT PANEL -->
+    <template x-teleport="body">
+    <div x-show="showEditPanel" class="fixed inset-0 z-50 overflow-hidden" aria-labelledby="slide-over-title" role="dialog" aria-modal="true" style="display: none;">
+        <div class="absolute inset-0 overflow-hidden">
+            <div x-show="showEditPanel" x-transition.opacity class="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity" @click="showEditPanel = false"></div>
+            <div class="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10">
+                <div x-show="showEditPanel" 
+                     x-transition:enter="transform transition ease-in-out duration-300" 
+                     x-transition:enter-start="translate-x-full" 
+                     x-transition:enter-end="translate-x-0" 
+                     x-transition:leave="transform transition ease-in-out duration-300" 
+                     x-transition:leave-start="translate-x-0" 
+                     x-transition:leave-end="translate-x-full" 
+                     class="pointer-events-auto w-screen max-w-md">
+                    
+                    <div class="flex h-full flex-col bg-background shadow-xl border-l border-border">
+                        <!-- Header -->
+                        <div class="px-6 py-6 border-b border-border bg-muted/30">
+                            <div class="flex items-start justify-between">
+                                <div>
+                                    <h2 class="text-lg font-semibold leading-none tracking-tight" id="slide-over-title">Chỉnh sửa Biên bản Vi phạm</h2>
+                                    <p class="text-sm text-muted-foreground mt-2">Cập nhật thông tin biên bản vi phạm.</p>
+                                </div>
+                                <div class="ml-3 flex h-7 items-center">
+                                    <button type="button" class="relative rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 p-1.5 transition-colors focus:outline-none" @click="showEditPanel = false">
+                                        <i data-lucide="x" class="h-5 w-5"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Form -->
+                        <form :action="currentEditRecord ? '{{ route('violation.index') }}/' + currentEditRecord.id : ''" method="POST" class="flex-1 flex flex-col overflow-hidden"
+                            x-data="{
+                                clientErrors: [],
+                                validateAndSubmit(e) {
+                                    this.clientErrors = [];
+                                    const studentId = this.$el.querySelector('[name=student_id]').value;
+                                    const typeId = this.$el.querySelector('[name=violation_type_id]').value;
+                                    const recordDate = this.$el.querySelector('[name=record_date]').value;
+                                    const desc = this.$el.querySelector('[name=description]').value;
+                                    
+                                    const errors = [];
+                                    if (!studentId) errors.push('Vui lòng chọn sinh viên vi phạm.');
+                                    if (!typeId) errors.push('Vui lòng chọn lỗi vi phạm.');
+                                    if (!recordDate) errors.push('Vui lòng chọn ngày vi phạm.');
+                                    if (recordDate && new Date(recordDate) > new Date()) errors.push('Ngày vi phạm không thể là ngày trong tương lai.');
+                                    if (desc.length > 1000) errors.push('Mô tả không được vượt quá 1000 ký tự.');
+                                    
+                                    if (errors.length > 0) {
+                                        this.clientErrors = errors;
+                                        e.preventDefault();
+                                    }
+                                }
+                            }"
+                            @submit="validateAndSubmit($event)">
+                            @csrf
+                            @method('PUT')
+                            
+                            <template x-if="currentEditRecord">
+                                <div class="flex-1 overflow-y-auto px-6 py-6 space-y-6">
+                                    <div x-show="clientErrors.length > 0" class="p-3 rounded-md bg-red-50 text-red-600 text-sm border border-red-200" style="display:none">
+                                        <div class="flex items-center font-medium mb-1">
+                                            <i data-lucide="alert-circle" class="h-4 w-4 mr-2"></i> Lỗi nhập liệu
+                                        </div>
+                                        <ul class="list-disc pl-5 space-y-1 text-xs">
+                                            <template x-for="err in clientErrors" :key="err">
+                                                <li x-text="err"></li>
+                                            </template>
+                                        </ul>
+                                    </div>
+
+                                    <div class="space-y-4">
+                                        <!-- Sinh viên (disabled) -->
+                                        <div class="space-y-2">
+                                            <label class="text-sm font-medium leading-none">Sinh viên vi phạm <span class="text-destructive">*</span></label>
+                                            <div class="relative w-full">
+                                                <input type="hidden" name="student_id" :value="currentEditRecord.student_id">
+                                                <button type="button" disabled class="flex h-10 w-full items-center justify-between rounded-md border border-input bg-muted px-3 py-2 text-sm shadow-sm opacity-70 cursor-not-allowed">
+                                                    <span x-text="'SV #' + currentEditRecord.student_id + ' - ' + (currentEditRecord.student?.full_name || 'Chưa cập nhật tên')"></span>
+                                                    <i data-lucide="lock" class="h-4 w-4 opacity-50"></i>
+                                                </button>
+                                                <p class="text-[11px] text-muted-foreground mt-1">Không thể thay đổi sinh viên sau khi lập biên bản.</p>
+                                            </div>
+                                        </div>
+
+                                        <!-- Lỗi vi phạm -->
+                                        <div class="space-y-2">
+                                            <label class="text-sm font-medium leading-none">Loại vi phạm <span class="text-destructive">*</span></label>
+                                            <div x-data="{ 
+                                                open: false, 
+                                                search: '', 
+                                                selected: currentEditRecord.violation_type_id, 
+                                                selectedText: currentEditRecord.violation_type?.name + ' (Phạt: ' + new Intl.NumberFormat('vi-VN').format(currentEditRecord.violation_type?.fine_amount || 0) + 'đ)' 
+                                            }" class="relative w-full">
+                                                <input type="hidden" name="violation_type_id" x-model="selected">
+                                                <button type="button" @click="open = !open" @click.away="open = false"
+                                                    class="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all hover:border-primary/50">
+                                                    <span x-text="selectedText"></span>
+                                                    <i data-lucide="chevron-down" class="h-4 w-4 opacity-50 transition-transform duration-200" :class="open ? 'rotate-180 opacity-100' : ''"></i>
+                                                </button>
+
+                                                <div x-show="open"
+                                                    x-transition:enter="transition ease-out duration-100"
+                                                    x-transition:enter-start="transform opacity-0 scale-95"
+                                                    x-transition:enter-end="transform opacity-100 scale-100"
+                                                    x-transition:leave="transition ease-in duration-75"
+                                                    x-transition:leave-start="transform opacity-100 scale-100"
+                                                    x-transition:leave-end="transform opacity-0 scale-95"
+                                                    class="absolute z-50 mt-1 max-h-60 w-full overflow-hidden flex flex-col rounded-md border border-border bg-popover text-popover-foreground shadow-md outline-none" style="display: none;">
+                                                    <div class="flex items-center border-b border-border px-3">
+                                                        <i data-lucide="search" class="mr-2 h-4 w-4 shrink-0 opacity-50"></i>
+                                                        <input type="text" x-model="search" class="flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50" placeholder="Tìm loại vi phạm...">
+                                                    </div>
+                                                    <div class="overflow-y-auto p-1 max-h-[180px]">
+                                                        @foreach ($violationTypes as $type)
+                                                        <div x-show="search === '' || '{{ mb_strtolower($type->name, 'UTF-8') }}'.toLowerCase().includes(search.toLowerCase())"
+                                                            @click="selected = '{{ $type->id }}'; selectedText = '{{ $type->name }} (Phạt: {{ number_format($type->fine_amount) }}đ)'; open = false; search = ''"
+                                                            class="relative flex w-full cursor-pointer select-none items-center rounded-sm py-2 pl-8 pr-2 text-sm outline-none hover:bg-accent hover:text-accent-foreground transition-colors"
+                                                            :class="selected == '{{ $type->id }}' ? 'bg-accent/50 text-accent-foreground font-medium' : ''">
+                                                            <span x-show="selected == '{{ $type->id }}'" class="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+                                                                <i data-lucide="check" class="h-4 w-4 text-primary"></i>
+                                                            </span>
+                                                            {{ $type->name }} (Phạt: {{ number_format($type->fine_amount) }}đ)
+                                                        </div>
+                                                        @endforeach
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Ngày vi phạm -->
+                                        <div class="space-y-2">
+                                            <label class="text-sm font-medium leading-none">Ngày vi phạm <span class="text-destructive">*</span></label>
+                                            <div x-data="{
+                                                open: false,
+                                                value: currentEditRecord.record_date ? new Date(currentEditRecord.record_date).toISOString().split('T')[0] : '',
+                                                month: new Date(currentEditRecord.record_date || new Date()).getMonth(),
+                                                year: new Date(currentEditRecord.record_date || new Date()).getFullYear(),
+                                                days: ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'],
+                                                months: ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6', 'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'],
+                                                get formattedValue() {
+                                                    if (!this.value) return '-- Chọn ngày --';
+                                                    const d = new Date(this.value);
+                                                    return ('0' + d.getDate()).slice(-2) + '/' + ('0' + (d.getMonth() + 1)).slice(-2) + '/' + d.getFullYear();
+                                                },
+                                                get blankDays() {
+                                                    let days = [];
+                                                    let firstDay = new Date(this.year, this.month, 1).getDay();
+                                                    for (let i = 0; i < firstDay; i++) {
+                                                        days.push(i);
+                                                    }
+                                                    return days;
+                                                },
+                                                get monthDays() {
+                                                    let days = [];
+                                                    let daysInMonth = new Date(this.year, this.month + 1, 0).getDate();
+                                                    for (let i = 1; i <= daysInMonth; i++) {
+                                                        days.push(i);
+                                                    }
+                                                    return days;
+                                                },
+                                                isSelectedDate(day) {
+                                                    if (!this.value) return false;
+                                                    const d = new Date(this.value);
+                                                    return d.getDate() === day && d.getMonth() === this.month && d.getFullYear() === this.year;
+                                                },
+                                                selectDate(day) {
+                                                    this.value = this.year + '-' + ('0' + (this.month + 1)).slice(-2) + '-' + ('0' + day).slice(-2);
+                                                    this.open = false;
+                                                }
+                                            }" class="relative w-full" @click.away="open = false">
+                                                <input type="hidden" name="record_date" x-model="value">
+                                                <button type="button" @click="open = !open"
+                                                    class="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all hover:border-primary/50">
+                                                    <span x-text="formattedValue" :class="value === '' ? 'text-muted-foreground' : 'text-foreground'"></span>
+                                                    <i data-lucide="calendar-days" class="h-4 w-4 opacity-50 transition-transform duration-200" :class="open ? 'text-primary' : ''"></i>
+                                                </button>
+
+                                                <div x-show="open"
+                                                    x-transition:enter="transition ease-out duration-100"
+                                                    x-transition:enter-start="transform opacity-0 scale-95"
+                                                    x-transition:enter-end="transform opacity-100 scale-100"
+                                                    x-transition:leave="transition ease-in duration-75"
+                                                    x-transition:leave-start="transform opacity-100 scale-100"
+                                                    x-transition:leave-end="transform opacity-0 scale-95"
+                                                    class="absolute z-50 mt-1 p-3 w-64 rounded-md border border-border bg-popover text-popover-foreground shadow-md outline-none" style="display: none;">
+                                                    <div class="flex items-center justify-between pb-3">
+                                                        <button type="button" @click="month--; if(month < 0) { month = 11; year--; }" class="h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 inline-flex items-center justify-center rounded-md border border-border hover:bg-accent hover:text-accent-foreground transition-colors">
+                                                            <i data-lucide="chevron-left" class="h-4 w-4"></i>
+                                                        </button>
+                                                        <div class="text-sm font-medium" x-text="months[month] + ', ' + year"></div>
+                                                        <button type="button" @click="month++; if(month > 11) { month = 0; year++; }" class="h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 inline-flex items-center justify-center rounded-md border border-border hover:bg-accent hover:text-accent-foreground transition-colors">
+                                                            <i data-lucide="chevron-right" class="h-4 w-4"></i>
+                                                        </button>
+                                                    </div>
+                                                    
+                                                    <div class="grid grid-cols-7 gap-1 text-center mb-1">
+                                                        <template x-for="day in days">
+                                                            <div class="text-[10px] uppercase text-muted-foreground font-medium" x-text="day"></div>
+                                                        </template>
+                                                    </div>
+                                                    
+                                                    <div class="grid grid-cols-7 gap-1">
+                                                        <template x-for="blank in blankDays">
+                                                            <div class="h-8 w-8"></div>
+                                                        </template>
+                                                        <template x-for="day in monthDays">
+                                                            <button type="button" @click="selectDate(day)"
+                                                                class="inline-flex h-8 w-8 items-center justify-center rounded-md text-sm transition-colors focus:outline-none hover:bg-accent hover:text-accent-foreground font-normal"
+                                                                :class="isSelectedDate(day) ? 'bg-primary text-primary-foreground font-medium shadow hover:bg-primary hover:text-primary-foreground' : 'text-foreground'"
+                                                                x-text="day">
+                                                            </button>
+                                                        </template>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Mô tả chi tiết -->
+                                        <div class="space-y-2">
+                                            <label class="text-sm font-medium leading-none">Mô tả chi tiết sự việc</label>
+                                            <textarea name="description" rows="4" x-model="currentEditRecord.description" class="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all hover:border-primary/50" placeholder="Nhập mô tả chi tiết..."></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+
+                            <div class="border-t border-border px-6 py-4 bg-muted/30 flex justify-end gap-3 mt-auto">
+                                <button type="button" @click="showEditPanel = false" class="inline-flex items-center justify-center rounded-md text-sm font-medium border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2">
+                                    Hủy
+                                </button>
+                                <button type="submit" class="inline-flex items-center justify-center rounded-md text-sm font-medium bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2">
+                                    Lưu Thay Đổi
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    </template>
+
+
     <!-- DETAIL PANEL -->
     <template x-teleport="body">
     <div x-show="showDetailPanel" class="fixed inset-0 z-50 overflow-hidden" aria-labelledby="slide-over-title" role="dialog" aria-modal="true" style="display: none;">
@@ -538,6 +795,12 @@
     function violationManager() {
         return {
             showCreatePanel: false,
+            showEditPanel: false,
+            currentEditRecord: null,
+            openEditPanel(record) {
+                this.currentEditRecord = record;
+                this.showEditPanel = true;
+            },
             showDetailPanel: false,
             currentRecord: null,
             

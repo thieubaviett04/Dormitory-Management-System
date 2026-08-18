@@ -123,5 +123,7 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::get('/violations/create', [ViolationRecordController::class, 'create'])->name('violation.create');
     Route::post('/violations', [ViolationRecordController::class, 'store'])->name('violation.store');
     Route::get('/violations/{id}', [ViolationRecordController::class, 'show'])->name('violation.show');
+    Route::put('/violations/{id}', [ViolationRecordController::class, 'update'])->name('violation.update');
+    Route::delete('/violations/{id}', [ViolationRecordController::class, 'destroy'])->name('violation.destroy');
     Route::patch('/violations/{id}/resolve', [ViolationRecordController::class, 'resolve'])->name('violation.resolve');
 });
