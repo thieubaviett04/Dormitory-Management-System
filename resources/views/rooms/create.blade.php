@@ -3,7 +3,27 @@
 @section('title', 'Thêm phòng mới')
 
 @section('content')
-<div class="max-w-2xl mx-auto space-y-6">
+<div class="max-w-2xl mx-auto space-y-6" x-data="{
+    buildings: {{ $buildings->map(fn($b) => ['id' => $b->id, 'name' => $b->name, 'floors' => $b->floors])->values()->toJson() }},
+    selectedBuildingId: '{{ old('building_id', '') }}',
+    roomNumber: '{{ old('room_number', '') }}',
+    get detectedFloor() {
+        const num = parseInt(this.roomNumber);
+        if (isNaN(num) || num < 100) return null;
+        return Math.floor(num / 100);
+    },
+    get maxFloor() {
+        const b = this.buildings.find(b => b.id == this.selectedBuildingId);
+        return b ? b.floors : 999;
+    },
+    get floorValid() {
+        if (this.detectedFloor === null) return true;
+        return this.detectedFloor >= 1 && this.detectedFloor <= this.maxFloor;
+    },
+    get selectedBuilding() {
+        return this.buildings.find(b => b.id == this.selectedBuildingId) || null;
+    }
+}">
     <!-- Header -->
     <div class="flex items-center space-x-2 text-sm font-medium text-muted-foreground">
         <a href="{{ route('rooms.index') }}" class="hover:text-foreground transition-colors">Quản lý Phòng</a>
@@ -13,7 +33,7 @@
 
     <div>
         <h2 class="text-2xl font-semibold tracking-tight text-foreground">Thêm phòng mới</h2>
-        <p class="text-sm text-muted-foreground mt-1">Chọn tòa nhà và điền thông tin phòng để tạo mới.</p>
+        <p class="text-sm text-muted-foreground mt-1">Chọn tòa nhà và điền số phòng — tầng sẽ được tự động xác định.</p>
     </div>
 
     <!-- Main Card -->
@@ -44,11 +64,13 @@
                 <!-- Tòa nhà -->
                 <div class="space-y-2">
                     <label class="text-sm font-medium leading-none" for="building_id">Tòa nhà</label>
-                    <select name="building_id" id="building_id" required class="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
+                    <select name="building_id" id="building_id" required
+                        x-model="selectedBuildingId"
+                        class="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
                         <option value="">-- Chọn tòa nhà --</option>
                         @foreach($buildings as $building)
                         <option value="{{ $building->id }}" {{ old('building_id') == $building->id ? 'selected' : '' }}>
-                            {{ $building->name }}
+                            {{ $building->name }} ({{ $building->floors }} tầng)
                         </option>
                         @endforeach
                     </select>
@@ -57,13 +79,32 @@
                 <!-- Số phòng -->
                 <div class="space-y-2">
                     <label class="text-sm font-medium leading-none" for="room_number">Số phòng</label>
-                    <input type="text" name="room_number" id="room_number" value="{{ old('room_number') }}" required placeholder="Ví dụ: 101, 102, 201..." class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring">
-                </div>
+                    <input type="text" name="room_number" id="room_number"
+                        value="{{ old('room_number') }}" required
+                        x-model="roomNumber"
+                        placeholder="Ví dụ: 101, 205, 1001..."
+                        class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring">
 
-                <!-- Tầng -->
-                <div class="space-y-2">
-                    <label class="text-sm font-medium leading-none" for="floor">Tầng</label>
-                    <input type="number" name="floor" id="floor" value="{{ old('floor') }}" required min="1" placeholder="Ví dụ: 1" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring">
+                    <!-- Hiển thị tầng tự động -->
+                    <div class="mt-1.5 flex items-center gap-2 text-xs" x-show="roomNumber !== ''">
+                        <template x-if="detectedFloor !== null && floorValid">
+                            <span class="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary px-2.5 py-0.5 font-medium">
+                                <i data-lucide="layers" class="h-3 w-3"></i>
+                                Tầng <span x-text="detectedFloor"></span>
+                            </span>
+                        </template>
+                        <template x-if="detectedFloor !== null && !floorValid && selectedBuilding">
+                            <span class="inline-flex items-center gap-1 rounded-full bg-destructive/10 text-destructive px-2.5 py-0.5 font-medium">
+                                <i data-lucide="alert-circle" class="h-3 w-3"></i>
+                                Tầng <span x-text="detectedFloor"></span> vượt quá số tầng (<span x-text="selectedBuilding ? selectedBuilding.floors : ''"></span> tầng)
+                            </span>
+                        </template>
+                        <template x-if="detectedFloor === null && roomNumber !== ''">
+                            <span class="text-muted-foreground">
+                                Số phòng phải có ít nhất 3 chữ số (vd: 101)
+                            </span>
+                        </template>
+                    </div>
                 </div>
 
                 <!-- Sức chứa -->

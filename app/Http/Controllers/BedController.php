@@ -54,6 +54,13 @@ class BedController extends Controller
             'bed_number.unique' => 'Số giường này đã tồn tại trong phòng đã chọn.',
         ]);
 
+        $room = Room::findOrFail($request->room_id);
+        if ($room->beds()->count() >= $room->capacity) {
+            throw ValidationException::withMessages([
+                'room_id' => 'Đã đạt số giường tối đa cho phòng này (' . $room->capacity . ' giường).',
+            ]);
+        }
+
         Bed::create([
             'room_id' => $request->room_id,
             'bed_number' => $request->bed_number,
@@ -109,10 +116,18 @@ class BedController extends Controller
             'bed_number.unique' => 'Số giường này đã tồn tại trong phòng đã chọn.',
         ]);
 
+        $room = Room::findOrFail($request->room_id);
+
         $hasActiveAllocation = $bed->allocations()->active()->exists();
         if ($bed->allocations()->exists() && (int) $request->room_id !== $bed->room_id) {
             throw ValidationException::withMessages([
                 'room_id' => 'Không thể chuyển giường sang phòng khác vì đã có lịch sử phân giường.',
+            ]);
+        }
+
+        if ((int) $request->room_id !== $bed->room_id && $room->beds()->count() >= $room->capacity) {
+            throw ValidationException::withMessages([
+                'room_id' => 'Đã đạt số giường tối đa cho phòng này (' . $room->capacity . ' giường).',
             ]);
         }
 

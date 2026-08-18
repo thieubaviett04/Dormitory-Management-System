@@ -104,18 +104,28 @@ class BuildingController extends Controller
     {
         $building = Building::findOrFail($id);
 
-        if (
-            $building->rooms()->exists()
-        ) {
-            throw \Illuminate\Validation\ValidationException::withMessages([
-                'building' => 'Không thể xóa tòa nhà đã có lịch sử phân giường.',
-            ]);
+        // Xóa cascade theo đúng thứ tự foreign key:
+        // ContractRenewals + Allocations → Contracts → RoomRegistrations → Beds → Rooms → Building
+        foreach ($building->rooms as $room) {
+            foreach ($room->roomRegistrations as $registration) {
+                if ($registration->contract) {
+                    $registration->contract->renewals()->delete();
+                    $registration->contract->allocations()->delete();
+                    $registration->contract->delete();
+                }
+                $registration->delete();
+            }
+            foreach ($room->beds as $bed) {
+                $bed->allocations()->delete();
+                $bed->delete();
+            }
+            $room->delete();
         }
 
         $building->delete();
 
         return redirect()
             ->route('buildings.index')
-            ->with('success', 'Xóa tòa nhà thành công.');
+            ->with('success', 'Xóa tòa nhà "' . $building->name . '" và toàn bộ dữ liệu liên quan thành công.');
     }
 }

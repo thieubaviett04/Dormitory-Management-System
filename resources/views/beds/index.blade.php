@@ -4,7 +4,8 @@
 
 @section('content')
 @php
-    $rooms = \App\Models\Room::with('building')->orderBy('room_number')->get();
+$rooms = \App\Models\Room::with('building')->orderBy('room_number')->get();
+$buildings = \App\Models\Building::orderBy('name')->get();
 @endphp
 <div class="space-y-6" x-data="{
     showCreatePanel: {{ $errors->any() && !old('_method') ? 'true' : 'false' }},
@@ -15,13 +16,46 @@
     selectedBed: {
         id: '{{ old('bed_id') }}',
         room_id: '{{ old('room_id') }}',
+        building_id: '',
         bed_number: '{{ old('bed_number') }}',
         status: '{{ old('status') }}'
     },
+    // Filters
+    filterBuildingId: sessionStorage.getItem('beds_filterBuildingId') || '',
+    filterRoomId: sessionStorage.getItem('beds_filterRoomId') || '',
+    // Slide-over Create state
+    createBuildingId: '{{ old('building_id', '') }}',
+    createRoomId: '{{ old('room_id', '') }}',
+    
+    // Master data
+    rooms: {{ $rooms->map(fn($r) => ['id' => $r->id, 'room_number' => $r->room_number, 'building_id' => $r->building_id])->values()->toJson() }},
+    
+    init() {
+        this.buildings = {{ $buildings->map(fn($b) => ['id' => $b->id, 'name' => $b->name])->values()->toJson() }};
+        this.$watch('filterBuildingId', value => {
+            sessionStorage.setItem('beds_filterBuildingId', value);
+        });
+        this.$watch('filterRoomId', value => {
+            sessionStorage.setItem('beds_filterRoomId', value);
+        });
+    },
+
+    // Computed
+    get filteredRoomsForFilter() {
+        return this.rooms.filter(r => !this.filterBuildingId || r.building_id == this.filterBuildingId);
+    },
+    get filteredRoomsForCreate() {
+        return this.rooms.filter(r => !this.createBuildingId || r.building_id == this.createBuildingId);
+    },
+    get filteredRoomsForEdit() {
+        return this.rooms.filter(r => !this.selectedBed.building_id || r.building_id == this.selectedBed.building_id);
+    },
+
     openEdit(bed) {
         this.selectedBed = {
             id: bed.id,
             room_id: bed.room_id,
+            building_id: bed.room ? bed.room.building_id : '',
             bed_number: bed.bed_number,
             status: bed.status
         };
@@ -39,10 +73,37 @@
             <h2 class="text-2xl font-semibold tracking-tight text-foreground">Quản lý Giường</h2>
             <p class="text-sm text-muted-foreground mt-1">Danh sách giường trong các phòng ở ký túc xá.</p>
         </div>
-        
+
         <div class="flex items-center space-x-3">
-            <button @click="showCreatePanel = true" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2">
+            <button @click="createBuildingId = filterBuildingId; createRoomId = filterRoomId; showCreatePanel = true" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2">
                 <i data-lucide="plus" class="mr-2 h-4 w-4"></i> Thêm giường mới
+            </button>
+        </div>
+    </div>
+
+    <!-- Filters Section -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 rounded-xl border bg-card text-card-foreground shadow-sm">
+        <div class="space-y-1.5">
+            <label class="text-xs font-semibold uppercase tracking-wider text-muted-foreground" for="filter_building">Lọc theo Tòa nhà</label>
+            <select id="filter_building" x-model="filterBuildingId" @change="filterRoomId = ''" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1.5 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-ring">
+                <option value="">Tất cả tòa nhà</option>
+                <template x-for="building in buildings" :key="building.id">
+                    <option :value="building.id" x-text="building.name"></option>
+                </template>
+            </select>
+        </div>
+        <div class="space-y-1.5">
+            <label class="text-xs font-semibold uppercase tracking-wider text-muted-foreground" for="filter_room">Lọc theo Phòng</label>
+            <select id="filter_room" x-model="filterRoomId" class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1.5 text-sm shadow-sm transition-colors focus:outline-none focus:ring-1 focus:ring-ring">
+                <option value="">Tất cả phòng</option>
+                <template x-for="room in filteredRoomsForFilter" :key="room.id">
+                    <option :value="room.id" x-text="'Phòng ' + room.room_number"></option>
+                </template>
+            </select>
+        </div>
+        <div class="flex items-end">
+            <button @click="filterBuildingId = ''; filterRoomId = ''" x-show="filterBuildingId || filterRoomId" x-cloak class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-4 w-full sm:w-auto">
+                <i data-lucide="filter-x" class="mr-2 h-4 w-4"></i> Xóa bộ lọc
             </button>
         </div>
     </div>
@@ -72,7 +133,8 @@
                 </thead>
                 <tbody class="[&_tr:last-child]:border-0">
                     @forelse($beds as $bed)
-                    <tr class="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                    <tr class="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
+                        x-show="(!filterBuildingId || '{{ $bed->room->building_id ?? '' }}' == filterBuildingId) && (!filterRoomId || '{{ $bed->room_id }}' == filterRoomId)">
                         <td class="p-4 align-middle font-medium text-muted-foreground">#{{ $bed->id }}</td>
                         <td class="p-4 align-middle font-medium">{{ $bed->room->building->name ?? 'N/A' }}</td>
                         <td class="p-4 align-middle font-bold text-primary">Phòng {{ $bed->room->room_number ?? 'N/A' }}</td>
@@ -94,7 +156,7 @@
                         </td>
                         <td class="p-4 align-middle text-right">
                             <div class="flex items-center justify-end space-x-2">
-                                <button @click="openEdit({{ json_encode($bed) }})" class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 px-3">
+                                <button @click="openEdit({{ json_encode($bed->load('room')) }})" class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 px-3">
                                     <i data-lucide="edit-3" class="mr-1.5 h-3.5 w-3.5"></i> Sửa
                                 </button>
                                 <button type="button" @click="confirmDelete('{{ route('beds.destroy', $bed->id) }}', 'Bạn có chắc chắn muốn xóa giường {{ $bed->bed_number }} thuộc phòng {{ $bed->room->room_number ?? 'N/A' }}?')" class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-destructive text-destructive-foreground shadow hover:bg-destructive/90 h-8 px-3">
@@ -122,34 +184,34 @@
         <div x-show="showCreatePanel" class="relative z-50" aria-labelledby="slide-over-title" role="dialog" aria-modal="true">
             <!-- Background backdrop -->
             <div x-show="showCreatePanel"
-                 x-transition:enter="ease-in-out duration-300"
-                 x-transition:enter-start="opacity-0"
-                 x-transition:enter-end="opacity-100"
-                 x-transition:leave="ease-in-out duration-300"
-                 x-transition:leave-start="opacity-100"
-                 x-transition:leave-end="opacity-0"
-                 class="fixed inset-0 bg-black/50 transition-opacity backdrop-blur-sm"
-                 @click="showCreatePanel = false"></div>
+                x-transition:enter="ease-in-out duration-300"
+                x-transition:enter-start="opacity-0"
+                x-transition:enter-end="opacity-100"
+                x-transition:leave="ease-in-out duration-300"
+                x-transition:leave-start="opacity-100"
+                x-transition:leave-end="opacity-0"
+                class="fixed inset-0 bg-black/50 transition-opacity backdrop-blur-sm"
+                @click="showCreatePanel = false"></div>
 
             <div class="fixed inset-0 overflow-hidden">
                 <div class="absolute inset-0 overflow-hidden">
                     <div class="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10">
                         <div x-show="showCreatePanel"
-                             x-transition:enter="transform transition ease-in-out duration-300 sm:duration-500"
-                             x-transition:enter-start="translate-x-full"
-                             x-transition:enter-end="translate-x-0"
-                             x-transition:leave="transform transition ease-in-out duration-300 sm:duration-500"
-                             x-transition:leave-start="translate-x-0"
-                             x-transition:leave-end="translate-x-full"
-                             class="pointer-events-auto w-screen max-w-md">
-                            
+                            x-transition:enter="transform transition ease-in-out duration-300 sm:duration-500"
+                            x-transition:enter-start="translate-x-full"
+                            x-transition:enter-end="translate-x-0"
+                            x-transition:leave="transform transition ease-in-out duration-300 sm:duration-500"
+                            x-transition:leave-start="translate-x-0"
+                            x-transition:leave-end="translate-x-full"
+                            class="pointer-events-auto w-screen max-w-md">
+
                             <!-- Panel content -->
                             <div class="flex h-full flex-col overflow-y-auto bg-background shadow-xl border-l border-border">
                                 <div class="px-6 py-6 border-b border-border bg-muted/30">
                                     <div class="flex items-start justify-between">
                                         <div>
                                             <h2 class="text-lg font-semibold leading-none tracking-tight">Thêm giường mới</h2>
-                                            <p class="text-sm text-muted-foreground mt-2">Chọn phòng và điền thông tin giường mới.</p>
+                                            <p class="text-sm text-muted-foreground mt-2">Chọn tòa nhà, phòng và điền số giường mới.</p>
                                         </div>
                                         <div class="ml-3 flex h-7 items-center">
                                             <button @click="showCreatePanel = false" type="button" class="relative rounded-md bg-background text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring">
@@ -181,16 +243,25 @@
                                         @endif
 
                                         <div class="space-y-4">
+                                            <!-- Chọn tòa nhà -->
+                                            <div class="space-y-2">
+                                                <label class="text-sm font-medium leading-none" for="create_building_id">Thuộc tòa nhà</label>
+                                                <select id="create_building_id" x-model="createBuildingId" @change="createRoomId = ''" required class="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
+                                                    <option value="">-- Chọn tòa nhà --</option>
+                                                    <template x-for="building in buildings" :key="building.id">
+                                                        <option :value="building.id" x-text="building.name"></option>
+                                                    </template>
+                                                </select>
+                                            </div>
+
                                             <!-- Chọn phòng -->
                                             <div class="space-y-2">
                                                 <label class="text-sm font-medium leading-none" for="create_room_id">Thuộc phòng</label>
-                                                <select name="room_id" id="create_room_id" required class="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
+                                                <select name="room_id" id="create_room_id" x-model="createRoomId" required class="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
                                                     <option value="">-- Chọn phòng ở --</option>
-                                                    @foreach($rooms as $room)
-                                                    <option value="{{ $room->id }}" {{ old('room_id') == $room->id ? 'selected' : '' }}>
-                                                        {{ $room->building->name ?? 'N/A' }} - Phòng {{ $room->room_number }}
-                                                    </option>
-                                                    @endforeach
+                                                    <template x-for="room in filteredRoomsForCreate" :key="room.id">
+                                                        <option :value="room.id" x-text="'Phòng ' + room.room_number"></option>
+                                                    </template>
                                                 </select>
                                             </div>
 
@@ -236,27 +307,27 @@
         <div x-show="showEditPanel" class="relative z-50" aria-labelledby="slide-over-title" role="dialog" aria-modal="true">
             <!-- Background backdrop -->
             <div x-show="showEditPanel"
-                 x-transition:enter="ease-in-out duration-300"
-                 x-transition:enter-start="opacity-0"
-                 x-transition:enter-end="opacity-100"
-                 x-transition:leave="ease-in-out duration-300"
-                 x-transition:leave-start="opacity-100"
-                 x-transition:leave-end="opacity-0"
-                 class="fixed inset-0 bg-black/50 transition-opacity backdrop-blur-sm"
-                 @click="showEditPanel = false"></div>
+                x-transition:enter="ease-in-out duration-300"
+                x-transition:enter-start="opacity-0"
+                x-transition:enter-end="opacity-100"
+                x-transition:leave="ease-in-out duration-300"
+                x-transition:leave-start="opacity-100"
+                x-transition:leave-end="opacity-0"
+                class="fixed inset-0 bg-black/50 transition-opacity backdrop-blur-sm"
+                @click="showEditPanel = false"></div>
 
             <div class="fixed inset-0 overflow-hidden">
                 <div class="absolute inset-0 overflow-hidden">
                     <div class="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10">
                         <div x-show="showEditPanel"
-                             x-transition:enter="transform transition ease-in-out duration-300 sm:duration-500"
-                             x-transition:enter-start="translate-x-full"
-                             x-transition:enter-end="translate-x-0"
-                             x-transition:leave="transform transition ease-in-out duration-300 sm:duration-500"
-                             x-transition:leave-start="translate-x-0"
-                             x-transition:leave-end="translate-x-full"
-                             class="pointer-events-auto w-screen max-w-md">
-                            
+                            x-transition:enter="transform transition ease-in-out duration-300 sm:duration-500"
+                            x-transition:enter-start="translate-x-full"
+                            x-transition:enter-end="translate-x-0"
+                            x-transition:leave="transform transition ease-in-out duration-300 sm:duration-500"
+                            x-transition:leave-start="translate-x-0"
+                            x-transition:leave-end="translate-x-full"
+                            class="pointer-events-auto w-screen max-w-md">
+
                             <!-- Panel content -->
                             <div class="flex h-full flex-col overflow-y-auto bg-background shadow-xl border-l border-border">
                                 <div class="px-6 py-6 border-b border-border bg-muted/30">
@@ -297,15 +368,25 @@
                                         @endif
 
                                         <div class="space-y-4">
+                                            <!-- Chọn tòa nhà -->
+                                            <div class="space-y-2">
+                                                <label class="text-sm font-medium leading-none" for="edit_building_id">Thuộc tòa nhà</label>
+                                                <select id="edit_building_id" x-model="selectedBed.building_id" @change="selectedBed.room_id = ''" required class="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
+                                                    <option value="">-- Chọn tòa nhà --</option>
+                                                    <template x-for="building in buildings" :key="building.id">
+                                                        <option :value="building.id" x-text="building.name"></option>
+                                                    </template>
+                                                </select>
+                                            </div>
+
                                             <!-- Chọn phòng -->
                                             <div class="space-y-2">
                                                 <label class="text-sm font-medium leading-none" for="edit_room_id">Thuộc phòng</label>
-                                                <select name="room_id" id="edit_room_id" required x-model="selectedBed.room_id" class="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-                                                    @foreach($rooms as $room)
-                                                    <option value="{{ $room->id }}">
-                                                        {{ $room->building->name ?? 'N/A' }} - Phòng {{ $room->room_number }}
-                                                    </option>
-                                                    @endforeach
+                                                <select name="room_id" id="edit_room_id" x-model="selectedBed.room_id" required class="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
+                                                    <option value="">-- Chọn phòng ở --</option>
+                                                    <template x-for="room in filteredRoomsForEdit" :key="room.id">
+                                                        <option :value="room.id" x-text="'Phòng ' + room.room_number"></option>
+                                                    </template>
                                                 </select>
                                             </div>
 
@@ -351,25 +432,25 @@
         <div x-show="showDeleteModal" class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
             <!-- Backdrop -->
             <div x-show="showDeleteModal"
-                 x-transition:enter="ease-out duration-300"
-                 x-transition:enter-start="opacity-0"
-                 x-transition:enter-end="opacity-100"
-                 x-transition:leave="ease-in duration-200"
-                 x-transition:leave-start="opacity-100"
-                 x-transition:leave-end="opacity-0"
-                 class="fixed inset-0 bg-black/50 transition-opacity backdrop-blur-sm"
-                 @click="showDeleteModal = false"></div>
+                x-transition:enter="ease-out duration-300"
+                x-transition:enter-start="opacity-0"
+                x-transition:enter-end="opacity-100"
+                x-transition:leave="ease-in duration-200"
+                x-transition:leave-start="opacity-100"
+                x-transition:leave-end="opacity-0"
+                class="fixed inset-0 bg-black/50 transition-opacity backdrop-blur-sm"
+                @click="showDeleteModal = false"></div>
 
             <!-- Modal Content Wrapper -->
             <div x-show="showDeleteModal"
-                 x-transition:enter="ease-out duration-300"
-                 x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-                 x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
-                 x-transition:leave="ease-in duration-200"
-                 x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
-                 x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-                 class="relative transform overflow-hidden rounded-lg bg-background border border-border shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg p-6">
-                
+                x-transition:enter="ease-out duration-300"
+                x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                x-transition:leave="ease-in duration-200"
+                x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                class="relative transform overflow-hidden rounded-lg bg-background border border-border shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg p-6">
+
                 <div class="sm:flex sm:items-start">
                     <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-destructive/10 text-destructive sm:mx-0 sm:h-10 sm:w-10">
                         <i data-lucide="alert-triangle" class="h-6 w-6"></i>
@@ -381,7 +462,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="mt-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
                     <button type="button" @click="showDeleteModal = false" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2">
                         Hủy bỏ
