@@ -6,9 +6,11 @@ use App\Models\ViolationRecord;
 use App\Models\Student;
 use App\Models\ViolationType;
 use App\Enums\ViolationStatus;
+use App\Enums\PaymentMethod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\Rule;
 class ViolationRecordController extends Controller
 {
     public function index()
@@ -69,7 +71,7 @@ class ViolationRecordController extends Controller
     public function resolve(Request $request, $id)
     {
         $request->validate([
-            'payment_method' => 'nullable|string'
+            'payment_method' => ['nullable', Rule::enum(PaymentMethod::class)]
         ]);
 
         $record = ViolationRecord::findOrFail($id);
@@ -77,7 +79,7 @@ class ViolationRecordController extends Controller
         
         // Save payment method if field exists, or we just log it if we create the field later
         // Assuming we will add a payment_method column via migration
-        if (\Schema::hasColumn('violation_records', 'payment_method')) {
+        if (Schema::hasColumn('violation_records', 'payment_method')) {
             $record->payment_method = $request->input('payment_method');
         }
         

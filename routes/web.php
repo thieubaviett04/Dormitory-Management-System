@@ -9,9 +9,13 @@ use App\Http\Controllers\RoomRegistrationController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ViolationRecordController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
 
 Route::get('/', function () {
-    return view('welcome');
+    if (Auth::check()) {
+        return Auth::user()->role === 'admin' ? redirect()->route('admin.dashboard') : redirect()->route('student.dashboard');
+    }
+    return redirect()->route('login');
 });
 
 // Các route Auth nằm ngoài middleware auth
@@ -44,12 +48,25 @@ Route::middleware(['auth', 'role:student'])->group(function () {
 Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::get('/admin/dashboard', function () {
         $stats = [
-            'buildings' => \App\Models\Building::count(),
-            'rooms'     => \App\Models\Room::count(),
-            'beds'      => \App\Models\Bed::count(),
+            'students'      => \App\Models\Student::count(),
+            'beds'          => \App\Models\Bed::count(),
             'beds_available' => \App\Models\Bed::where('status', 'available')->count(),
+            'registrations_pending' => \App\Models\RoomRegistration::where('status', 'pending')->count(),
+            'invoices_unpaid' => \App\Models\Invoice::where('status', 'unpaid')->count(),
         ];
-        return view('admin.dashboard', compact('stats'));
+        
+        $chartData = [
+            'invoices' => [
+                'paid' => \App\Models\Invoice::where('status', 'paid')->count(),
+                'unpaid' => $stats['invoices_unpaid'],
+            ],
+            'beds' => [
+                'available' => $stats['beds_available'],
+                'occupied' => max(0, $stats['beds'] - $stats['beds_available']),
+            ]
+        ];
+
+        return view('admin.dashboard', compact('stats', 'chartData'));
     })->name('admin.dashboard');
 
     // ==========================================
