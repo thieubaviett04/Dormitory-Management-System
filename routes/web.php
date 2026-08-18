@@ -102,8 +102,19 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
 
     // Invoices routes
     Route::get('/invoices', [InvoiceController::class, 'index'])->name('invoice.index');
+    
+    // Bulk routes must be before {id} routes
+    Route::get('/invoices/bulk-create', [InvoiceController::class, 'bulkCreate'])->name('invoice.bulk.create');
+    Route::post('/invoices/bulk-store', [InvoiceController::class, 'bulkStore'])->name('invoice.bulk.store');
+    
     Route::get('/invoices/create', [InvoiceController::class, 'create'])->name('invoice.create');
     Route::post('/invoices', [InvoiceController::class, 'store'])->name('invoice.store');
+    
+    // Specific invoice routes
+    Route::get('/invoices/{id}/edit', [InvoiceController::class, 'edit'])->name('invoice.edit');
+    Route::put('/invoices/{id}', [InvoiceController::class, 'update'])->name('invoice.update');
+    Route::delete('/invoices/{id}', [InvoiceController::class, 'destroy'])->name('invoice.destroy');
+    Route::get('/invoices/{id}/print', [InvoiceController::class, 'print'])->name('invoice.print');
     Route::patch('/invoices/{id}/pay', [InvoiceController::class, 'pay'])->name('invoice.pay');
     Route::get('/invoices/{id}', [InvoiceController::class, 'show'])->name('invoice.show');
 
