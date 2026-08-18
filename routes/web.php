@@ -92,4 +92,8 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
 
     // Violations routes
     Route::get('/violations', [ViolationRecordController::class, 'index'])->name('violation.index');
+    Route::get('/violations/create', [ViolationRecordController::class, 'create'])->name('violation.create');
+    Route::post('/violations', [ViolationRecordController::class, 'store'])->name('violation.store');
+    Route::get('/violations/{id}', [ViolationRecordController::class, 'show'])->name('violation.show');
+    Route::patch('/violations/{id}/resolve', [ViolationRecordController::class, 'resolve'])->name('violation.resolve');
 });
