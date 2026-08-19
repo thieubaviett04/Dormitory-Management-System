@@ -23,6 +23,14 @@ Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login.submit');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
+// Giao diện Module Đăng ký của Đắc
+Route::get('/dang-ky-phong', function () {
+    return view('registrations.create'); });
+Route::get('/quan-ly-don', function () {
+    return view('registrations.index'); });
+Route::get('/tra-cuu-don', function () {
+    return view('registrations.status'); });
+
 // Các route nghiệp vụ yêu cầu đăng nhập và phân quyền cho STUDENT
 Route::middleware(['auth', 'role:student'])->group(function () {
     Route::get('/student/dashboard', function () {
@@ -48,13 +56,13 @@ Route::middleware(['auth', 'role:student'])->group(function () {
 Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::get('/admin/dashboard', function () {
         $stats = [
-            'students'      => \App\Models\Student::count(),
-            'beds'          => \App\Models\Bed::count(),
+            'students' => \App\Models\Student::count(),
+            'beds' => \App\Models\Bed::count(),
             'beds_available' => \App\Models\Bed::where('status', 'available')->count(),
             'registrations_pending' => \App\Models\RoomRegistration::where('status', 'pending')->count(),
             'invoices_unpaid' => \App\Models\Invoice::where('status', 'unpaid')->count(),
         ];
-        
+
         $chartData = [
             'invoices' => [
                 'paid' => \App\Models\Invoice::where('status', 'paid')->count(),
@@ -102,14 +110,14 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
 
     // Invoices routes
     Route::get('/invoices', [InvoiceController::class, 'index'])->name('invoice.index');
-    
+
     // Bulk routes must be before {id} routes
     Route::get('/invoices/bulk-create', [InvoiceController::class, 'bulkCreate'])->name('invoice.bulk.create');
     Route::post('/invoices/bulk-store', [InvoiceController::class, 'bulkStore'])->name('invoice.bulk.store');
-    
+
     Route::get('/invoices/create', [InvoiceController::class, 'create'])->name('invoice.create');
     Route::post('/invoices', [InvoiceController::class, 'store'])->name('invoice.store');
-    
+
     // Specific invoice routes
     Route::get('/invoices/{id}/edit', [InvoiceController::class, 'edit'])->name('invoice.edit');
     Route::put('/invoices/{id}', [InvoiceController::class, 'update'])->name('invoice.update');
